@@ -1,0 +1,95 @@
+erDiagram
+
+    tb_assy_lot {
+        int id PK
+        varchar lot_no "UNIQUE NOT NULL"
+        varchar wos FK
+        int qty
+        varchar tag_id
+        int status_id FK
+        varchar location_name "Reader location name"
+        varchar machine_no "From AS400 poll"
+        varchar emp_id "Last manual change"
+        varchar remark
+        datetime cleared_at
+        datetime updated_at
+        datetime created_at
+    }
+
+    tb_assy_wos {
+        int id PK
+        varchar wos "UNIQUE"
+        varchar brg_type "Part No."
+        varchar spec
+        datetime created_at
+    }
+
+    tb_master_assy_status {
+        int id PK
+        varchar status "bf_issue|gr_f1|mc_f1|completed"
+        varchar label_status "Display name"
+        int process_id FK
+    }
+
+    tb_master_process {
+        int id PK
+        varchar process_code "1400|1410"
+        varchar process_name "BEFORE ISSUE|GAUGING"
+    }
+
+    tb_assy_tag {
+        int id PK
+        varchar tag_id "NOT NULL"
+        varchar lot_no FK
+        varchar status "active|cleared"
+        datetime registered_at
+        datetime cleared_at
+    }
+
+    tb_assy_log {
+        int id PK
+        varchar lot_no FK
+        varchar tag_id
+        varchar event_type "REGISTER|GAUGING_ROOM_F1|MC_GAUGING_F1|COMPLETED|CHANGE_PROCESS"
+        varchar location_name
+        varchar machine_no
+        varchar emp_id
+        varchar remark
+        datetime created_at
+    }
+
+    tb_assy_login {
+        int id PK
+        varchar emp_id "UNIQUE"
+        varchar eng_name
+        varchar eng_surname
+        varchar password "Plain text — OT network only"
+        varchar position "admin|user"
+    }
+
+    tb_assy_api_log {
+        int id PK
+        varchar api_type "RECEIVE|POLL"
+        varchar method
+        varchar url
+        varchar request_params
+        varchar request_body
+        int http_status
+        varchar status "SUCCESS|NOT_FOUND|ERROR"
+        varchar response
+        varchar error_msg
+        int response_time_ms
+        datetime created_at
+    }
+
+    tb_assy_mock_done {
+        int id PK
+        varchar lot_no
+        datetime created_at
+    }
+
+    tb_assy_lot }o--|| tb_assy_wos : "wos → wos"
+    tb_assy_lot }o--|| tb_master_assy_status : "status_id → id"
+    tb_master_assy_status }o--o| tb_master_process : "process_id → id"
+    tb_assy_tag }o--|| tb_assy_lot : "lot_no → lot_no"
+    tb_assy_log }o--|| tb_assy_lot : "lot_no → lot_no"

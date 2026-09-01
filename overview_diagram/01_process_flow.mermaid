@@ -1,0 +1,74 @@
+flowchart TD
+    START([Start]) --> REG
+
+    REG["🔵 REGISTER
+    Scan lot barcode + RFID tag"]
+
+    REG -->|LOT_NOT_FOUND| E1([❌ Lot not in AS400])
+    REG -->|LOT_ALREADY_EXISTS| E2([❌ Already registered])
+    REG -->|TAG_IN_USE| E3([❌ Tag busy])
+    REG -->|INVALID_STATUS| E4([❌ Invalid status])
+    REG -->|OK| DB1
+
+    DB1["INSERT tb_assy_lot — status_id=1
+    INSERT tb_assy_tag — active
+    INSERT tb_assy_log — REGISTER"]
+
+    DB1 --> S1[/status_id = 1 — bf_issue/]
+
+    S1 --> GR["🟡 GAUGING ROOM F1
+    RFID Reader 1 auto-scan"]
+
+    GR -->|INVALID_PROCESS_ORDER| SKIP1["⏭ Skip silently
+    lot not yet at this step"]
+    GR -->|TAG_NOT_FOUND| E5([❌ Tag not found in DB])
+    GR -->|OK| DB2
+
+    DB2["UPDATE tb_assy_lot — status_id=2, location_name
+    INSERT tb_assy_log — GAUGING_ROOM_F1"]
+
+    DB2 --> S2[/status_id = 2 — gr_f1/]
+
+    S2 --> MC["🟠 MC GAUGING F1
+    RFID Reader 2 auto-scan"]
+
+    MC -->|INVALID_PROCESS_ORDER| SKIP2["⏭ Skip silently
+    lot not yet at this step"]
+    MC -->|TAG_NOT_FOUND| E6([❌ Tag not found in DB])
+    MC -->|OK| DB3
+
+    DB3["UPDATE tb_assy_lot — status_id=3, location_name
+    INSERT tb_assy_log — MC_GAUGING_F1"]
+
+    DB3 --> S3[/status_id = 3 — mc_f1/]
+
+    S3 --> POLL{"Node.js polls AS400
+    every 30s
+    ⚠️ PENDING — API not ready"}
+
+    POLL -->|Not found / no match| WAIT[Wait next cycle]
+    WAIT --> POLL
+
+    POLL -->|Found + machine match| AUTO["Auto completed
+    machine_name starts with
+    AMT / AGL / FFL / AGG"]
+
+    MANUAL["👤 Admin — Clear Tag Manual
+    1. Enter Lot No. → show lot info
+    2. Scan Tag ID → show tag info
+    3. Check MATCH / NOT MATCH
+    4. Select Process + Remark + EmpID
+    5. Click Clear Tag"]
+
+    MANUAL -->|NOT MATCH| BLOCK([❌ Cannot clear — mismatch])
+    MANUAL -->|MATCH| COMP
+
+    AUTO --> DB4
+    COMP --> DB4
+
+    DB4["UPDATE tb_assy_lot — status_id=4, cleared_at, machine_no, emp_id
+    UPDATE tb_assy_tag — cleared
+    INSERT tb_assy_log — COMPLETED"]
+
+    DB4 --> S4[/status_id = 4 — completed/]
+    S4 --> END([✅ End — Tag ready for reuse])

@@ -1,0 +1,16 @@
+[
+    {
+        "type": "gr_f1",
+        "location_name": "GAUGING ROOM F1",
+        "enabled": true,
+        "ip": "192.168.1.190",
+        "power": 10
+    },
+    {
+        "type": "mc_f1",
+        "location_name": "MC GAUGING F1",
+        "enabled": false,
+        "ip": "192.168.1.190",
+        "power": 10
+    }
+]

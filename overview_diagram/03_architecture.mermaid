@@ -1,0 +1,50 @@
+flowchart TB
+
+    subgraph BROWSER["🖥️ Browser / TV Monitor"]
+        REACT["React :3000
+        Dashboard | Register | Clear Tag
+        Management | Mock Done"]
+    end
+
+    subgraph SERVER["🖧 Windows Server — OT Network"]
+        NODE["Node.js :5001
+        Express API
+        AS400 Polling (30s)"]
+
+        PYTHON["Python :8001
+        FastAPI
+        scan_loop + reconnect_loop"]
+
+        SQL["SQL Server
+        db_rfid_assembly"]
+
+        CONFIG["reader_config.json
+        Reader settings"]
+    end
+
+    subgraph READERS["📡 RFID Hardware — TCP :6000"]
+        R1["Reader 1
+        type: gr_f1
+        GAUGING ROOM F1"]
+        R2["Reader 2
+        type: mc_f1
+        MC GAUGING F1"]
+    end
+
+    subgraph AS400["🏭 AS400 — IT Network"]
+        API1["Lot Info API
+        GET /gauge-receiving/{lot_no}"]
+        API2["Gauge Result API
+        GET /gauge-result/{lot_no}/{machine}
+        ⚠️ PENDING"]
+    end
+
+    REACT -->|HTTP Axios| NODE
+    NODE -->|mssql Windows Auth| SQL
+    NODE -->|Read/Write| CONFIG
+    PYTHON -->|HTTP httpx POST| NODE
+    NODE -->|HTTP GET /status /restart| PYTHON
+    PYTHON -->|TCP connect outbound| R1
+    PYTHON -->|TCP connect outbound| R2
+    NODE -->|REST API| API1
+    NODE -.->|REST API PENDING| API2
