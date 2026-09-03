@@ -1258,13 +1258,6 @@ INSERT INTO tb_assy_tag (tag_id, lot_no, status) VALUES ('ZZTEST', 'ZZLOT3', 'cl
 DELETE FROM tb_assy_tag WHERE tag_id = 'ZZTEST';
 ```
 
-**Step 5: Commit the script**
-
-```bash
-git add backend/backup_DB_SP/fix_tag_pairing.sql
-git commit -m "chore: reset tag data and add active-pairing unique index"
-```
-
 Per project convention: present the script and the Step 1 row counts for approval before running it. It contains `DELETE` statements against three tables.
 
 > **Vocabulary note:** the user described the cleared state as "unactive". The existing schema default and the SPs use `'cleared'`. Keep `'cleared'` — changing the vocabulary means touching data, SPs, and the ER diagram for no functional gain.
@@ -1293,8 +1286,6 @@ Pin the **side effects** too, not just the return code. After a successful `comp
 Use a `ZZTEST` lot prefix and delete everything you created in a `t.after()` hook, FK-safe: `tb_assy_log`, `tb_assy_tag`, `tb_assy_lot`.
 
 > **Do not run these against a database the line is actively using.** Use a restored copy. If none exists, raise it as a blocker before starting Phase 5 rather than running them anyway.
-
-Commit: `test: characterize process transition SPs before porting`.
 
 ---
 
@@ -1359,8 +1350,6 @@ const registerLot = async (db, { lot_no, wos, brg_type, spec, qty, tag_id, locat
 Unit tests: one per guard branch, asserting both the returned code and that no INSERT followed a fired guard (`db.calls.length`); one asserting `registerLot` runs inside `transaction()`; one asserting the `TAG_IN_USE` check queries `tb_assy_tag`, not `tb_assy_lot`.
 
 Verify: register a fresh lot; register it again (`LOT_ALREADY_EXISTS`); bind the same tag to a second lot (`TAG_IN_USE`); complete the first lot, then bind that tag to a new lot (must now succeed — this is the reuse requirement). Re-run Task 15's characterization tests.
-
-Commit: `refactor: replace register and lot_by_tag SPs with lotService`.
 
 ---
 
@@ -1435,8 +1424,6 @@ Unit tests: every branch of both functions; `UPDLOCK` present in the read; nothi
 
 Verify with hardware if possible: register a lot, walk it past Reader 1 then Reader 2, watch the dashboard advance. Then walk a fresh tag past Reader 2 first and confirm it is silently ignored.
 
-Commit: `refactor: replace reader transition SPs with processService (transactional)`.
-
 ---
 
 ## Task 18: `processService` — completion and change-process (FLAG-2)
@@ -1491,8 +1478,6 @@ Unit tests: every branch of both functions; the `CLEAR_FAILED` row is written fo
 
 Verify: Clear Tag page end to end, including a deliberate failure (clear a lot at status 1) and confirming the `CLEAR_FAILED` row appears. Then the admin override path, including an override to Completed followed by reusing that tag on a new lot.
 
-Commit: `refactor: replace completed and change_process SPs; log failed clears`.
-
 ---
 
 ## Task 19: Fix D7 — reader config paths
@@ -1508,8 +1493,6 @@ Move all three accesses into `readerConfigService.js` exporting `readConfig()`, 
 > `writeConfig` writes whatever the request body contains with no validation. A malformed write breaks the Python service on its next restart. Out of scope here; raised in Task 22.
 
 Verify: start from the repository root (`node backend/server.js`) and confirm Management → Reader Config loads. That fails today.
-
-Commit: `fix: resolve reader_config.json relative to __dirname, not CWD`.
 
 ---
 
@@ -1528,7 +1511,7 @@ CREATE INDEX IX_assy_api_log_ts ON tb_assy_api_log(created_at)
 
 `IX_assy_tag_lot` matters more after Task 18, which looks up tag rows by `lot_no` on every completion. Already recommended in `overview_diagram/README.md` §14.
 
-Present for approval; do not run automatically. Commit: `chore: add index creation script`.
+Present for approval; do not run automatically.
 
 ---
 
@@ -1585,13 +1568,6 @@ DROP PROCEDURE IF EXISTS dbo.Stored_tb_assy_change_process;
 GO
 ```
 
-**Step 3: Commit without running**
-
-```bash
-git add backend/backup_DB_SP/drop_retired_sps.sql
-git commit -m "chore: add drop script for retired stored procedures (not yet run)"
-```
-
 Present for approval before executing — destructive schema change.
 
 ---
@@ -1615,8 +1591,6 @@ Changes this refactor requires:
 - **§6 API Endpoints** — mark which return HTTP status codes vs `{result}`, per the contract boundary.
 - **§15** — note bcrypt hashing.
 - **SYSTEM_OVERVIEW.md** — the "Data written at each step" table still describes SP behaviour; update the Completed rows for the `CLEAR_FAILED` path.
-
-Commit: `docs: update system docs for the service layer`.
 
 ---
 

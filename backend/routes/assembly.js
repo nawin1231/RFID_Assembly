@@ -3,34 +3,15 @@ const router = express.Router();
 const fs = require('fs');
 const { sql, poolPromise } = require('../database');
 const axios = require('axios');
+const db = require('../db');
+const { insertApiLog } = require('../services/apiLogService');
 
 const API_TOKEN = process.env.API_TOKEN;
 const API_RECEIVE_URL = process.env.API_RECEIVE_URL;
 
-// HELPER
-const logApi = async (pool, data) => {
-    try {
-        await pool.request()
-            .input('api_type', sql.VarChar, data.api_type || null)
-            .input('method', sql.VarChar, data.method || null)
-            .input('url', sql.VarChar, data.url || null)
-            .input('request_params', sql.VarChar, data.request_params || null)
-            .input('request_body', sql.VarChar, data.request_body || null)
-            .input('http_status', sql.Int, data.http_status || null)
-            .input('status', sql.VarChar, data.status || null)
-            .input('response', sql.VarChar, data.response || null)
-            .input('error_msg', sql.VarChar, data.error_msg || null)
-            .input('response_time_ms', sql.Int, data.response_time_ms || null)
-            .execute('Stored_tb_assy_api_log_insert');
-    } catch (err) {
-        console.error('[API Log Error]', err.message);
-    }
-};
-
 // LOT
 // ดึงข้อมูล lot จาก AS400
 router.get('/lot/:lot_no', async (req, res) => {
-    const pool = await poolPromise;
     const url = `${API_RECEIVE_URL}/${req.params.lot_no}`;
     const start = Date.now();
     try {
@@ -40,7 +21,7 @@ router.get('/lot/:lot_no', async (req, res) => {
         const response_time_ms = Date.now() - start;
         const data = result.data[0];
 
-        await logApi(pool, {
+        await insertApiLog(db, {
             api_type: 'RECEIVE', method: 'GET', url,
             request_params: req.params.lot_no,
             http_status: result.status,
@@ -60,7 +41,7 @@ router.get('/lot/:lot_no', async (req, res) => {
         });
     } catch (err) {
         const response_time_ms = Date.now() - start;
-        await logApi(pool, {
+        await insertApiLog(db, {
             api_type: 'RECEIVE', method: 'GET', url,
             request_params: req.params.lot_no,
             http_status: err.response?.status || null,
