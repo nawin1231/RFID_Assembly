@@ -1196,8 +1196,6 @@ Unit tests: assert the summary and lots queries apply the same filter set; asser
 
 Verify: Dashboard → Summary tab, all four cards, with and without filters. Compare against a screenshot taken before.
 
-Commit: `refactor: replace dashboard SP; unify filters and drop unused top5`.
-
 ---
 
 ## Task 14: Enforce the tag-pairing invariant (D4)
