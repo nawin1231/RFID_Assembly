@@ -173,8 +173,6 @@ async function findActiveLotByTag(db, tagId) { ... }
 
 **Parameterisation.** Every user-supplied value goes through a bound parameter, `LIKE` patterns included — build `'%' + @param + '%'` inside the SQL string and bind the value. The system has no SQL injection today; do not introduce it.
 
-**Commit after every task.** Small commits, one task each.
-
 **Running the app** — from `backend/`: `node server.js`. No watcher, no build step.
 
 ---
@@ -329,13 +327,6 @@ Start the server and hit any read endpoint. Then confirm you are on the right da
 SELECT DB_NAME()  -- run from a query the backend issues, or check SQL Server's active sessions
 ```
 
-**Step 9: Commit**
-
-```bash
-git add backend/package.json backend/database.js backend/.env.example backend/test/helpers/
-git commit -m "test: add node:test harness, db test double, and env-driven db config"
-```
-
 > Do not commit `backend/.env` — it holds a machine-specific server name. Confirm it is in `.gitignore`; if it is not, add it in this commit.
 
 ---
@@ -372,13 +363,6 @@ SELECT lot_no, event_type FROM tb_assy_log WHERE lot_no = '<test lot>' AND event
 ```
 
 Expected: tag row `cleared` with `cleared_at` set; one `COMPLETED` log row. Neither was true before.
-
-**Step 4: Commit**
-
-```bash
-git add backend/server.js
-git commit -m "fix: polling updated tb_assy_tag.status_id which does not exist"
-```
 
 > Leave the rest of the loop alone. Per D1 the user is replacing it with the AS400 check. When that happens it should call `processService.completeLot()` from Task 18 rather than inlining SQL again — note this in the handover.
 
@@ -477,13 +461,6 @@ module.exports = { query, transaction, typed, inferSqlType, sql };
 Run: `cd backend && node --test test/unit/db.test.js`
 Expected: PASS
 
-**Step 5: Commit**
-
-```bash
-git add backend/db.js backend/test/unit/db.test.js
-git commit -m "feat: add db seam for parameterised queries and transactions"
-```
-
 ---
 
 ## Task 4: `apiLogService` — the pilot
@@ -581,13 +558,6 @@ SELECT TOP 1 * FROM tb_assy_api_log ORDER BY created_at DESC
 ```
 
 Expected: a new row matching the pre-refactor shape.
-
-**Step 7: Commit**
-
-```bash
-git add backend/services/apiLogService.js backend/test/unit/apiLogService.test.js backend/routes/assembly.js
-git commit -m "refactor: replace api_log_insert SP with apiLogService"
-```
 
 ---
 
@@ -702,13 +672,6 @@ router.delete('/mock-done/:lot_no', async (req, res) => {
 **Step 6: Verify in the browser**
 
 Mock Done page: add a lot, add it again (duplicate message), delete it, delete it again.
-
-**Step 7: Commit**
-
-```bash
-git add backend/services/mockService.js backend/test/unit/mockService.test.js backend/routes/assembly.js
-git commit -m "refactor: replace mock_done SPs with mockService"
-```
 
 ---
 
@@ -829,13 +792,6 @@ Follow the Task 5 pattern. The routes currently pass `process_id || null`; pass 
 
 Management → Status tab: list, create, edit, delete. Then delete a status that lots reference and confirm the FK error still reaches the UI.
 
-**Step 7: Commit**
-
-```bash
-git add backend/services/masterService.js backend/test/unit/masterService.test.js backend/routes/assembly.js
-git commit -m "refactor: replace master_assy_status SPs with masterService"
-```
-
 ---
 
 ## Task 7: `masterService` — process master
@@ -854,7 +810,7 @@ DELETE FROM tb_master_process WHERE id = @id
 
 > The SP had no `ORDER BY`. Add `ORDER BY process_code` — the Management list rendering in an arbitrary order is a latent annoyance, and `dashboard_process_summary` already orders this way. This is a deliberate small improvement, not a preservation.
 
-One test per function plus an error-path test. Verify via Management → Process tab. Commit: `refactor: replace master_process SPs with masterService`.
+One test per function plus an error-path test. Verify via Management → Process tab.
 
 ---
 
@@ -884,8 +840,6 @@ Import `asResult` from `masterService` — or extract it to `backend/services/_r
 Tests must include: `verifyLogin` returns null on no match; the SELECT projection contains no `password` column (assert on the projection specifically — `password` still legitimately appears in the WHERE); `updateUser` omits `emp_id`.
 
 Verify: log in as a known user; log in with a wrong password (401); Management → User tab CRUD.
-
-Commit: `refactor: replace login SPs with userService`.
 
 ---
 
@@ -982,15 +936,6 @@ SELECT emp_id, password FROM tb_assy_login
 ```
 
 Expected: every value starts `$2a$` or `$2b$`. No plaintext.
-
-**Step 7: Commit**
-
-```bash
-git add backend/package.json backend/package-lock.json backend/services/userService.js \
-        backend/test/unit/userService.test.js backend/scripts/rehash_passwords.js \
-        backend/backup_DB_SP/alter_login_password_width.sql
-git commit -m "feat: hash passwords with bcryptjs"
-```
 
 ---
 
@@ -1115,14 +1060,6 @@ try {
 
 For each of the four tabs: create, edit, delete, and at least one failure — a duplicate `emp_id` (409), a status still referenced by lots (409), a delete of something already gone (404). Confirm the message is the friendly one and **no SQL error text reaches the browser**.
 
-**Step 7: Commit**
-
-```bash
-git add backend/services/errors.js backend/services/ backend/routes/assembly.js \
-        backend/server.js backend/test/unit/ frontend/src/pages/Assembly/
-git commit -m "refactor: use HTTP status codes for CRUD endpoints, stop leaking SQL errors"
-```
-
 ---
 
 ## Task 11: Characterization baselines for the dashboard
@@ -1160,8 +1097,6 @@ Add equivalents for `dashboard_history`, `dashboard_process_summary` (assert pro
 Run: `cd backend && $env:RUN_DB_TESTS=1; npm run test:integration`
 
 **Paste the printed BASELINE lines into this file under Task 13** before moving on. Task 13 needs them.
-
-Commit: `test: record dashboard SP baselines before changing them`.
 
 ---
 
@@ -1204,8 +1139,6 @@ ORDER BY p.process_code ASC
 Unit tests: `TOP 200` present on both list queries; date params bound as `sql.Date`; `process_summary`'s `!= 4` appears before `GROUP BY`.
 
 Verify: Dashboard → Detail tab with each filter alone and combined; Inventory Summary table; Clear Tag → History with a date range.
-
-Commit: `refactor: replace dashboard_history, process_summary, clear_tag_history SPs`.
 
 ---
 
