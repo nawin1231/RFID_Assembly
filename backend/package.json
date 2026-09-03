@@ -16,5 +16,8 @@
     "express": "^5.2.1",
     "msnodesqlv8": "^5.2.3",
     "mssql": "^12.7.0"
+  },
+  "allowScripts": {
+    "msnodesqlv8@5.2.3": true
   }
 }
