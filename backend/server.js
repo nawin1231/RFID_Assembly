@@ -38,7 +38,7 @@ const startPolling = async () => {
 
                 await pool.request()
                     .input('lot_no', sql.VarChar, row.lot_no)
-                    .query(`UPDATE tb_assy_tag SET status_id = 'cleared', cleared_at = GETDATE() WHERE lot_no = @lot_no`);
+                    .query(`UPDATE tb_assy_tag SET status = 'cleared', cleared_at = GETDATE() WHERE lot_no = @lot_no AND status = 'active'`);
 
                 await pool.request()
                     .input('lot_no', sql.VarChar, row.lot_no)
