@@ -6,7 +6,8 @@ const axios = require('axios');
 const db = require('../db');
 const { insertApiLog } = require('../services/apiLogService');
 
-const API_TOKEN = process.env.API_TOKEN;
+
+const BEARER_TOKEN = `Bearer ${process.env.API_TOKEN}`
 const API_RECEIVE_URL = process.env.API_RECEIVE_URL;
 
 // LOT
@@ -16,7 +17,7 @@ router.get('/lot/:lot_no', async (req, res) => {
     const start = Date.now();
     try {
         const result = await axios.get(url, {
-            headers: { Authorization: API_TOKEN }
+            headers: { Authorization: BEARER_TOKEN }
         });
         const response_time_ms = Date.now() - start;
         const data = result.data[0];
