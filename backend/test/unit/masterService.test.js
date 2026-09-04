@@ -3,6 +3,7 @@ const assert = require('node:assert');
 const { createFakeDb } = require('../helpers/fakeDb');
 const {
     listStatuses, createStatus, updateStatus, deleteStatus,
+    listProcesses, createProcess, updateProcess, deleteProcess,
 } = require('../../services/masterService');
 
 test('listStatuses joins the process master', async () => {
@@ -35,4 +36,37 @@ test('updateStatus passes a null process_id through', async () => {
 test('deleteStatus returns OK', async () => {
     const db = createFakeDb([{ rowsAffected: [1] }]);
     assert.deepStrictEqual(await deleteStatus(db, 1), { result: 'OK' });
+});
+
+test('listProcesses orders by process_code', async () => {
+    const db = createFakeDb([{ recordset: [{ id: 1, process_code: '1400' }] }]);
+    const rows = await listProcesses(db);
+    assert.strictEqual(rows[0].process_code, '1400');
+    assert.match(db.calls[0].sql, /ORDER BY process_code/);
+});
+
+test('createProcess returns OK', async () => {
+    const db = createFakeDb([{ rowsAffected: [1] }]);
+    assert.deepStrictEqual(
+        await createProcess(db, { process_code: '1400', process_name: 'F1' }),
+        { result: 'OK' });
+});
+
+test('createProcess returns the error message as result, not a throw', async () => {
+    const db = { query: async () => { throw new Error('duplicate key'); } };
+    assert.deepStrictEqual(
+        await createProcess(db, { process_code: '1400', process_name: 'F1' }),
+        { result: 'duplicate key' });
+});
+
+test('updateProcess returns OK', async () => {
+    const db = createFakeDb([{ rowsAffected: [1] }]);
+    assert.deepStrictEqual(
+        await updateProcess(db, { id: 1, process_code: '1400', process_name: 'F1' }),
+        { result: 'OK' });
+});
+
+test('deleteProcess returns OK', async () => {
+    const db = createFakeDb([{ rowsAffected: [1] }]);
+    assert.deepStrictEqual(await deleteProcess(db, 1), { result: 'OK' });
 });
