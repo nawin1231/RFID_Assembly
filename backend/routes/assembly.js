@@ -6,6 +6,7 @@ const axios = require('axios');
 const db = require('../db');
 const { insertApiLog } = require('../services/apiLogService');
 const { listMockDone, addMockDone, removeMockDone } = require('../services/mockService');
+const { listStatuses, createStatus, updateStatus, deleteStatus } = require('../services/masterService');
 
 
 const BEARER_TOKEN = `Bearer ${process.env.API_TOKEN}`
@@ -329,57 +330,23 @@ router.delete('/login/users/:id', async (req, res) => {
 
 // STATUS MASTER
 router.get('/status', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .execute('Stored_tb_master_assy_status_select');
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await listStatuses(db)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/status', async (req, res) => {
-    try {
-        const { status, label_status, process_id } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('status', sql.VarChar, status)
-            .input('label_status', sql.VarChar, label_status)
-            .input('process_id', sql.Int, process_id || null)
-            .execute('Stored_tb_master_assy_status_insert');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await createStatus(db, req.body)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.put('/status/:id', async (req, res) => {
-    try {
-        const { status, label_status, process_id } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .input('status', sql.VarChar, status)
-            .input('label_status', sql.VarChar, label_status)
-            .input('process_id', sql.Int, process_id || null)
-            .execute('Stored_tb_master_assy_status_update');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await updateStatus(db, { id: req.params.id, ...req.body })); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/status/:id', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .execute('Stored_tb_master_assy_status_delete');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await deleteStatus(db, req.params.id)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // MASTER PROCESS
