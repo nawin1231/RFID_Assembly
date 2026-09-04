@@ -5,6 +5,7 @@ const { sql, poolPromise } = require('../database');
 const axios = require('axios');
 const db = require('../db');
 const { insertApiLog } = require('../services/apiLogService');
+const { listMockDone, addMockDone, removeMockDone } = require('../services/mockService');
 
 
 const BEARER_TOKEN = `Bearer ${process.env.API_TOKEN}`
@@ -202,39 +203,18 @@ router.post('/completed', async (req, res) => {
 
 // MOCK DONE
 router.get('/mock-done', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .execute('Stored_tb_assy_mock_done_select');
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await listMockDone(db)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/mock-done', async (req, res) => {
-    try {
-        const { lot_no } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('lot_no', sql.VarChar, lot_no)
-            .execute('Stored_tb_assy_mock_done_insert');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await addMockDone(db, req.body.lot_no)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/mock-done/:lot_no', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('lot_no', sql.VarChar, req.params.lot_no)
-            .execute('Stored_tb_assy_mock_done_delete');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await removeMockDone(db, req.params.lot_no)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // READER CONFIG
