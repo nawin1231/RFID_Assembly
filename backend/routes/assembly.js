@@ -10,6 +10,7 @@ const {
     listStatuses, createStatus, updateStatus, deleteStatus,
     listProcesses, createProcess, updateProcess, deleteProcess,
 } = require('../services/masterService');
+const { verifyLogin, listUsers, createUser, updateUser, deleteUser } = require('../services/userService');
 
 
 const BEARER_TOKEN = `Bearer ${process.env.API_TOKEN}`
@@ -262,73 +263,32 @@ router.post('/readers-restart', async (req, res) => {
 router.post('/login', async (req, res) => {
     try {
         const { emp_id, password } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('emp_id', sql.VarChar, emp_id)
-            .input('password', sql.VarChar, password)
-            .execute('Stored_tb_assy_login_verify');
-        if (result.recordset.length === 0)
-            return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
-        res.json({ result: 'OK', user: result.recordset[0] });
+        const user = await verifyLogin(db, emp_id, password);
+        if (!user) return res.status(401).json({ error: 'INVALID_CREDENTIALS' });
+        res.json({ result: 'OK', user });
     } catch (err) {
         res.status(500).json({ error: err.message });
     }
 });
 
 router.get('/login/users', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .execute('Stored_tb_assy_login_select');
-        res.json(result.recordset);
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await listUsers(db)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.post('/login/users', async (req, res) => {
-    try {
-        const { emp_id, eng_name, eng_surname, password, position } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('emp_id', sql.VarChar, emp_id)
-            .input('eng_name', sql.VarChar, eng_name)
-            .input('eng_surname', sql.VarChar, eng_surname)
-            .input('password', sql.VarChar, password)
-            .input('position', sql.VarChar, position)
-            .execute('Stored_tb_assy_login_insert');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await createUser(db, req.body)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.put('/login/users/:id', async (req, res) => {
-    try {
-        const { eng_name, eng_surname, position } = req.body;
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .input('eng_name', sql.VarChar, eng_name)
-            .input('eng_surname', sql.VarChar, eng_surname)
-            .input('position', sql.VarChar, position)
-            .execute('Stored_tb_assy_login_update');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await updateUser(db, { id: req.params.id, ...req.body })); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 router.delete('/login/users/:id', async (req, res) => {
-    try {
-        const pool = await poolPromise;
-        const result = await pool.request()
-            .input('id', sql.Int, req.params.id)
-            .execute('Stored_tb_assy_login_delete');
-        res.json({ result: result.recordset[0].result });
-    } catch (err) {
-        res.status(500).json({ error: err.message });
-    }
+    try { res.json(await deleteUser(db, req.params.id)); }
+    catch (err) { res.status(500).json({ error: err.message }); }
 });
 
 // STATUS MASTER
