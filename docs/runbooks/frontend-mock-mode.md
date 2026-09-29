@@ -10,7 +10,7 @@ Do not use it to test the real API or real data. All data is fake and lives in m
 - Environment variables (names only):
   - `REACT_APP_MOCK` — turns mock mode on. The `dev:mock` script sets it to `true`. `frontend/.env` keeps it `false` for normal runs and builds.
   - `REACT_APP_MOCK_LATENCY` — fake network delay in ms. Optional.
-- Allowed environment: local dev server only. `npm run build` always drops the mock code (`NODE_ENV=production`), so mock mode cannot run from a production build.
+- Allowed environment: local dev server only. `npm run build` always drops the mock code, and fails if any mock code is left in `build/` (`scripts/check-no-mocks.mjs`).
 
 ## Command
 Folder: `frontend/`
@@ -55,12 +55,12 @@ These mirror the real API. The pages are not changed for mock mode.
 4. Run `npm test -- --watchAll=false --testPathPattern=mocks` in `frontend/`.
 
 ## Production safety check
-Run after changes to `src/config/instance.js` or `src/mocks/`. Folder: `frontend/`. The build forces the flag on, to prove the guard holds even then.
+Automatic. `npm run build` runs `scripts/check-no-mocks.mjs` after the bundle is written. It fails the build if `build/**/*.js` contains `No mock for` or `MOCK001`.
+To prove the guard holds with the flag forced on (folder: `frontend/`):
 
     $env:REACT_APP_MOCK='true'; npm run build; Remove-Item Env:REACT_APP_MOCK
-    Select-String -Path build/static/js/*.js -Pattern "MOCK001","No mock for" | Measure-Object
 
-Pass: `Count : 0`. Any other count means the mock code is in the production bundle. Do not ship. Check the `NODE_ENV !== 'production'` guard in `src/config/instance.js`.
+Pass: `check-no-mocks: OK`. Fail: the build exits with an error and lists the files. Do not ship. Check the mock guard in `src/index.jsx`.
 
 ## Expected output
 - Pass: the dev server opens the app. Screens show demo data. No request goes to the backend.

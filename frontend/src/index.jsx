@@ -3,15 +3,24 @@ import ReactDOM from 'react-dom/client';
 import './index.css';
 import App from './App';
 import reportWebVitals from './reportWebVitals';
+import { backendApi } from './config/instance';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
-root.render(
+const renderApp = () => root.render(
   <React.StrictMode>
     <App />
   </React.StrictMode>
 );
 
-// If you want to start measuring performance in your app, pass a function
-// to log results (for example: reportWebVitals(console.log))
-// or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
+// Inline env check + dynamic import let the production build drop the whole mocks tree.
+// Render waits for the install, so no request can reach the real backend in mock mode.
+if (process.env.NODE_ENV !== 'production' && process.env.REACT_APP_MOCK === 'true') {
+  import('./mocks').then(({ installMockMode }) => {
+    installMockMode(backendApi);
+    renderApp();
+  });
+} else {
+  renderApp();
+}
+
 reportWebVitals();

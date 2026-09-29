@@ -23,7 +23,7 @@
   "scripts": {
     "start": "react-scripts start",
     "dev:mock": "cross-env REACT_APP_MOCK=true react-scripts start",
-    "build": "react-scripts build",
+    "build": "react-scripts build && node scripts/check-no-mocks.mjs",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
   },
