@@ -40,6 +40,26 @@ describe('GET /dashboard', () => {
         expect(after.gr_f1).toBeGreaterThan(before.gr_f1);
         expect(after.total_qty).toBe(before.total_qty);
     });
+
+    test('top5 counts active lots per bearing type, most first, at most 5', async () => {
+        const { top5 } = await get('/dashboard');
+        expect(top5.length).toBeGreaterThan(0);
+        expect(top5.length).toBeLessThanOrEqual(5);
+        const counts = top5.map((r) => r.total_qty);
+        expect(counts).toEqual([...counts].sort((a, b) => b - a));
+        const active6204 = db.lots.filter((l) => l.status_id !== 4 && l.brg_type === '6204ZZCM').length;
+        expect(top5.find((r) => r.brg_type === '6204ZZCM').total_qty).toBe(active6204);
+    });
+
+    test('lots lists filtered active lots with their status label', async () => {
+        const { lots } = await get('/dashboard', { status_id: '2' });
+        expect(lots.length).toBeGreaterThan(0);
+        expect(lots.every((l) => l.status_id === 2 && l.label_status === 'Gauging Room F1')).toBe(true);
+        expect(Object.keys(lots[0]).sort()).toEqual([
+            'brg_type', 'created_at', 'label_status', 'location_name', 'lot_no', 'machine_no',
+            'qty', 'spec', 'status_id', 'tag_id', 'updated_at', 'wos',
+        ]);
+    });
 });
 
 describe('GET /dashboard/process-summary', () => {

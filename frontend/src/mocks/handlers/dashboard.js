@@ -19,6 +19,25 @@ const matchesFilter = (lot, q) =>
 
 const activeLots = (db) => db.lots.filter((l) => l.status_id !== COMPLETED);
 
+const TOP_N = 5;
+
+const withLabel = (db) => (lot) => ({
+    tag_id: lot.tag_id, lot_no: lot.lot_no, wos: lot.wos, qty: lot.qty, status_id: lot.status_id,
+    label_status: db.statuses.find((s) => s.id === lot.status_id)?.label_status ?? null,
+    brg_type: lot.brg_type, spec: lot.spec, location_name: lot.location_name, machine_no: lot.machine_no,
+    created_at: lot.created_at, updated_at: lot.updated_at,
+});
+
+// Counts lots, not pieces (see Bruno "Dashboard - Summary").
+const topBearingTypes = (lots) => {
+    const counts = new Map();
+    lots.forEach((l) => counts.set(l.brg_type, (counts.get(l.brg_type) ?? 0) + 1));
+    return [...counts]
+        .map(([brg_type, total_qty]) => ({ brg_type, total_qty }))
+        .sort((a, b) => b.total_qty - a.total_qty || a.brg_type.localeCompare(b.brg_type))
+        .slice(0, TOP_N);
+};
+
 export const dashboardRoutes = (db) => [
     {
         method: 'GET',
@@ -26,14 +45,20 @@ export const dashboardRoutes = (db) => [
         handler: ({ query }) => {
             const lots = db.lots.filter((l) => matchesFilter(l, query));
             const qtyAt = (statusId) => sumQty(lots.filter((l) => l.status_id === statusId));
+            const active = lots.filter((l) => l.status_id !== COMPLETED);
             return {
                 data: {
                     summary: {
-                        total_qty: sumQty(lots.filter((l) => l.status_id !== COMPLETED)),
+                        total_qty: sumQty(active),
                         bf_issue: qtyAt(1),
                         gr_f1: qtyAt(2),
                         mc_f1: qtyAt(3),
                     },
+                    top5: topBearingTypes(active),
+                    lots: [...active]
+                        .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
+                        .slice(0, MAX_ROWS)
+                        .map(withLabel(db)),
                 },
             };
         },

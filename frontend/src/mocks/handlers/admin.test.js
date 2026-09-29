@@ -66,9 +66,12 @@ describe('readers', () => {
         expect((await call('GET', '/readers-config')).data).toEqual(config);
     });
 
-    test('status reports enabled readers as connected', async () => {
+    test('status reports each reader with index and ip, enabled ones as connected', async () => {
         expect((await call('GET', '/readers-status')).data).toEqual({
-            readers: [{ type: 'gr_f1', connected: true }, { type: 'mc_f1', connected: false }],
+            readers: [
+                { index: 0, type: 'gr_f1', ip: '192.0.2.10', connected: true },
+                { index: 1, type: 'mc_f1', ip: '192.0.2.11', connected: false },
+            ],
         });
     });
 

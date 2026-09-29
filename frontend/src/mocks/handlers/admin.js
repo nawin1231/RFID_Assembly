@@ -107,7 +107,9 @@ export const adminRoutes = (db) => [
         method: 'GET',
         path: '/readers-status',
         handler: () => ({
-            data: { readers: db.readerConfig.map((r) => ({ type: r.type, connected: Boolean(r.enabled) })) },
+            data: {
+                readers: db.readerConfig.map((r, index) => ({ index, type: r.type, ip: r.ip, connected: Boolean(r.enabled) })),
+            },
         }),
     },
     { method: 'POST', path: '/readers-restart', handler: () => OK },
