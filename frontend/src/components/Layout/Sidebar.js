@@ -7,6 +7,8 @@ import {
     AppstoreOutlined,
     ClearOutlined,
     SettingOutlined,
+    ToolOutlined,
+    ApiOutlined,
 } from '@ant-design/icons';
 
 const Sidebar = () => {
@@ -32,9 +34,12 @@ const Sidebar = () => {
     const navItems = [
         { label: 'Dashboard', icon: <DashboardOutlined />, path: '/assembly/dashboard' },
         { label: 'Register', icon: <ScanOutlined />, path: '/assembly/register' },
+        { label: 'Gauging Room F1', icon: <ToolOutlined />, path: '/assembly/gauging-room-f1' },
+        { label: 'MC Gauging F1', icon: <ToolOutlined />, path: '/assembly/mc-gauging-f1' },
         { label: 'Clear Tag', icon: <ClearOutlined />, path: '/assembly/clear-tag' },
         { label: 'Mock Done', icon: <CheckOutlined />, path: '/assembly/mock-done' },
         { label: 'Management', icon: <SettingOutlined />, path: '/assembly/management' },
+        { label: 'Reader Config', icon: <ApiOutlined />, path: '/assembly/reader-config' },
     ];
 
     const isActive = (path) => location.pathname === path;

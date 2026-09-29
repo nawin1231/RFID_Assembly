@@ -1,0 +1,78 @@
+import { adminRoutes } from './admin';
+import { createTestDb, callRoute } from '../testUtils';
+
+let db;
+let routes;
+beforeEach(() => {
+    db = createTestDb();
+    routes = adminRoutes(db);
+});
+
+const call = (method, path, body) => callRoute(routes, method, path, { body });
+
+describe('/status', () => {
+    test('lists statuses joined with their process, with numeric ids', async () => {
+        const { data } = await call('GET', '/status');
+        expect(data.find((s) => s.id === 1)).toMatchObject({ status: 'bf_issue', process_code: '1400' });
+        data.forEach((s) => expect(typeof s.id).toBe('number'));
+    });
+
+    test('creates a status with the next id', async () => {
+        expect((await call('POST', '/status', { status: 'x', label_status: 'X' })).data).toEqual({ result: 'OK' });
+        expect(db.statuses.find((s) => s.status === 'x')).toMatchObject({ id: 5, process_id: null });
+    });
+
+    test('updates by string id and unlinks the process, like the real API', async () => {
+        await call('PUT', '/status/2', { status: 'gr_f1', label_status: 'Renamed' });
+        expect(db.statuses.find((s) => s.id === 2)).toMatchObject({ label_status: 'Renamed', process_id: null });
+    });
+
+    test('refuses to delete a status used by a lot', async () => {
+        const { data } = await call('DELETE', '/status/1');
+        expect(data.result).toMatch(/REFERENCE constraint "FK_assy_lot_status"/);
+        expect(db.statuses.some((s) => s.id === 1)).toBe(true);
+    });
+
+    test('deletes an unused status', async () => {
+        await call('POST', '/status', { status: 'x', label_status: 'X' });
+        expect((await call('DELETE', '/status/5')).data).toEqual({ result: 'OK' });
+        expect(db.statuses.some((s) => s.id === 5)).toBe(false);
+    });
+});
+
+describe('/process', () => {
+    test('lists processes ordered by code', async () => {
+        await call('POST', '/process', { process_code: '0100', process_name: 'FIRST' });
+        const { data } = await call('GET', '/process');
+        expect(data.map((p) => p.process_code)).toEqual(['0100', '1400', '1500']);
+    });
+
+    test('updates by string id', async () => {
+        await call('PUT', '/process/1', { process_code: '1401', process_name: 'RENAMED' });
+        expect(db.processes.find((p) => p.id === 1)).toMatchObject({ process_code: '1401', process_name: 'RENAMED' });
+    });
+
+    test('refuses to delete a process used by a status', async () => {
+        const { data } = await call('DELETE', '/process/1');
+        expect(data.result).toMatch(/REFERENCE constraint "FK_status_process"/);
+        expect(db.processes.some((p) => p.id === 1)).toBe(true);
+    });
+});
+
+describe('readers', () => {
+    test('saving the config changes what is read back', async () => {
+        const config = [{ type: 'gr_f1', location_name: 'NEW ROOM', enabled: true, ip: '192.0.2.99', power: 20 }];
+        expect((await call('PUT', '/readers-config', config)).data).toEqual({ result: 'OK' });
+        expect((await call('GET', '/readers-config')).data).toEqual(config);
+    });
+
+    test('status reports enabled readers as connected', async () => {
+        expect((await call('GET', '/readers-status')).data).toEqual({
+            readers: [{ type: 'gr_f1', connected: true }, { type: 'mc_f1', connected: false }],
+        });
+    });
+
+    test('restart answers OK', async () => {
+        expect((await call('POST', '/readers-restart')).data).toEqual({ result: 'OK' });
+    });
+});

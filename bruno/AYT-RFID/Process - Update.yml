@@ -1,0 +1,37 @@
+info:
+  name: Process - Update
+  type: http
+  seq: 11
+
+http:
+  method: PUT
+  url: "{{urlPrefix}}/api/assembly/process/1"
+  body:
+    type: json
+    data: |-
+      {
+        "process_code": "9999",
+        "process_name": "Test Process Updated"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |-
+  Update a process by id. Updating an id that does not exist still returns OK.
+  A database error comes back as HTTP 200 with the message in `result`.
+
+  ### 200 Updated
+  ```json
+  { "result": "OK" }
+  ```
+
+  ### 200 Database error in result
+  ```json
+  { "result": "Cannot insert duplicate key row in object 'dbo.tb_master_process'." }
+  ```

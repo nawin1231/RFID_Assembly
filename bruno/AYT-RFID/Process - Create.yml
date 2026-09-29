@@ -1,0 +1,37 @@
+info:
+  name: Process - Create
+  type: http
+  seq: 10
+
+http:
+  method: POST
+  url: "{{urlPrefix}}/api/assembly/process"
+  body:
+    type: json
+    data: |-
+      {
+        "process_code": "9999",
+        "process_name": "Test Process"
+      }
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
+  forwardAuthorizationHeader: false
+
+docs: |-
+  Create a process.
+  A database error (for example a duplicate process_code) comes back as HTTP 200 with the message in `result`.
+
+  ### 200 Created
+  ```json
+  { "result": "OK" }
+  ```
+
+  ### 200 Database error in result
+  ```json
+  { "result": "Cannot insert duplicate key row in object 'dbo.tb_master_process'." }
+  ```

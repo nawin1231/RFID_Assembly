@@ -22,9 +22,15 @@
   },
   "scripts": {
     "start": "react-scripts start",
+    "dev:mock": "cross-env REACT_APP_MOCK=true react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject"
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^axios$": "axios/dist/node/axios.cjs"
+    }
   },
   "eslintConfig": {
     "extends": [

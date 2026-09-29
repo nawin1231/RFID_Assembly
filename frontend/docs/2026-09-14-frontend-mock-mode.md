@@ -28,6 +28,7 @@
 | 10. Route table + `installMockMode` | [ ] | after 5–9 |
 | 11. Wire into `instance.js` + bundle check + runbook | [ ] | after 10 |
 | 12. Sidebar nav entries (real, not mock-only) | [ ] | independent |
+| 13. Bruno collection into the repo + missing requests + example responses | [ ] | independent (added 2026-09-29, option A) |
 
 ## Spec (inlined)
 
@@ -45,7 +46,7 @@ The global standard is MSW with mock data built from Bruno example responses. Th
 
 - Every call already goes through one `backendApi` instance, so the adapter covers 100% of traffic with zero page changes.
 - No runtime dependency is added. MSW 2 under CRA 5 / jest 27 also needs `TextEncoder` / stream polyfills and a service worker in `public/`.
-- The repo has no Bruno collection yet, so "built from Bruno examples" is not possible. When a collection exists, the fixtures in `src/mocks/fixtures/` should be checked against its example responses.
+- The Bruno collection (`AYT-RFID`) lives outside the repo, covers 17 of the 32 endpoints, and has no saved example responses. So "built from Bruno examples" is not possible yet. The response shapes in this plan come from the page code and `backend/services/*.js`. When the collection has example responses, check the fixtures in `src/mocks/fixtures/` against them.
 
 The script name still follows the standard: `dev:mock`.
 
@@ -811,7 +812,7 @@ export const callRoute = async (routes, method, path, { query = {}, body = {} } 
 - [ ] **Step 7: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/db`
-Expected: PASS, 9 tests.
+Expected: PASS, 11 tests.
 
 - [ ] **Step 8: Hand off**
 
@@ -1991,7 +1992,7 @@ Expected: PASS, 36 tests (34 + 2).
 - [ ] **Step 5: Run the whole suite**
 
 Run: `npm test -- --watchAll=false`
-Expected: PASS, 12 suites, 115 tests, no failures.
+Expected: PASS, 12 suites, 117 tests, no failures.
 
 - [ ] **Step 6: Hand off**
 
@@ -2134,7 +2135,7 @@ Use the `runbook-docs` skill to write `docs/runbooks/frontend-mock-mode.md`. It 
 - [ ] **Step 9: Run the full check**
 
 Run: `npm test -- --watchAll=false`, then `npm run build`.
-Expected: all tests PASS (13 suites, 119 tests) and the build succeeds with no new warnings.
+Expected: all tests PASS (13 suites, 121 tests) and the build succeeds with no new warnings.
 
 - [ ] **Step 10: Hand off**
 
@@ -2199,6 +2200,44 @@ Suggested message: `feat(frontend): link scan and reader-config pages in the sid
 
 ---
 
+### Task 13: Bruno collection into the repo + missing requests + example responses
+
+**Files:**
+- Create: `bruno/AYT-RFID/` at the repo root. Copy `opencollection.yml`, `.gitignore` and the 17 request files from `C:\Users\bpa8251\Documents\bruno\AYT-RFID\`. Do not change or delete the originals.
+- Create: 16 new request files in `bruno/AYT-RFID/`, one per backend route not yet covered.
+- Modify: all 33 request files, to add a `docs:` block with example responses.
+
+**Interfaces:**
+- Consumes: `backend/routes/assembly.js` (method, path, status codes, body fields) and `backend/services/*.js` (response shapes). Read-only.
+- Produces: one request file per route in `backend/routes/assembly.js` (33 active routes).
+
+**Rules:**
+- Follow the existing file format exactly: `info` (name, type `http`, seq), `http` (method, url, body, `auth: inherit`), `settings` (same 5 keys as the existing files).
+- URL prefix: `"{{urlPrefix}}/api/assembly/..."`. Keep the `urlPrefix` collection variable; do not rename it to `baseUrl`.
+- Document the **backend** path. Scans are `POST /gauging-room-f1` and `POST /mc-gauging-f1` (the frontend calls `/gr_f1` and `/mc_f1`; that mismatch is a separate bug, not fixed here).
+- Fake data only, matching the mock fixtures: lots `DEMO000001`–`DEMO000040`, tags `E2801160000xxxxx`, emp ids `MOCK001` / `MOCK002`, password `DEMO1234`, reader IPs `192.0.2.10` / `192.0.2.11`, parts `6204ZZCM` / `NS7S`, dates on `2026-09-29`.
+- Example responses go in a `docs: |-` Markdown block: one `### <status> <case>` heading per case with a fenced `json` body. Cover the success case and each main error the route returns (e.g. 404 `LOT_NOT_FOUND`, 200 `{ "result": "INVALID_PROCESS" }`, 401 `INVALID_CREDENTIALS`, 500 `{ "error": "..." }` only if the route has a distinct 500 body).
+- Response shapes must match what the route and service actually return. Where the frontend reads fewer fields, still document the full backend shape.
+
+**Steps:**
+
+- [ ] **Step 1: Copy the collection.** Copy the 19 files to `bruno/AYT-RFID/`.
+- [ ] **Step 2: Replace real-looking data in the copies.**
+  - `TH9H92698` → `DEMO000001` (in `Create Mock Lot.yml`, `Delete Mock Lots.yml`, `Get All Mock Lot.yml`, `Get One lot.yml`).
+  - `Login.yml` body: `E001` / `changeme` → `MOCK001` / `DEMO1234`.
+  - `User - Create.yml` body: `TEST01` / `changeme` → `MOCK099` / `DEMO1234`.
+  - `Get All Mock Lot.yml`: remove the request body (a GET sends none).
+- [ ] **Step 3: Add the 16 missing requests**, seq 18 onward, file name `<Area> - <Action>.yml`:
+  `GET /lot-by-tag/:tag_id`, `GET /lot-by-lot/:lot_no`, `POST /register-tag`, `POST /gauging-room-f1`, `POST /mc-gauging-f1`, `POST /change-process`, `POST /completed`, `GET /readers-config`, `PUT /readers-config`, `GET /readers-status`, `POST /readers-restart`, `GET /dashboard`, `GET /dashboard/history` (with query params `date_from`, `date_to`, `brg_type`, `wos`, `lot_no`, `status_id`, `location_name`), `GET /dashboard/process-summary`, `GET /dashboard/locations`, `GET /clear-tag/history` (query `date_from`, `date_to`).
+- [ ] **Step 4: Add a `docs:` block** with example responses to all 33 request files.
+- [ ] **Step 5: Check.**
+  - Every route in `backend/routes/assembly.js` (not the commented-out ones) has exactly one request file, with matching method and path.
+  - `Select-String -Path bruno/AYT-RFID/*.yml -Pattern "TH9H","changeme","E001"` returns nothing.
+  - Every file parses as YAML: `node -e "const y=require('yaml');..."` is not available, so use `npx --yes yaml-lint bruno/AYT-RFID/*.yml` if it works offline; otherwise, report that the check was skipped.
+- [ ] **Step 6: Hand off.** Do not send any request. The user runs Bruno against a real backend. Suggested message: `docs(api): move Bruno collection into repo and document all assembly routes`
+
+---
+
 ## Execution: model, effort, where it runs
 
 ```
@@ -2208,6 +2247,7 @@ Subagent `implementer` x3 in parallel (Sonnet 5, medium): group B: task 7, task 
 Subagent `implementer` (Sonnet 5, medium):                task 10
 Main session (Opus 5.5, high):                            task 11 (bundle check is the risky step)
 Subagent `quick-edit` (Haiku 4.5, low):                   task 12 (any time)
+Subagent `implementer` (Sonnet 5, medium):                task 13 (parallel with tasks 1–4; different files)
 Subagent `code-reviewer`:                                 whole-branch review at the end
 ```
 
