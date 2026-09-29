@@ -20,8 +20,8 @@ const ScanTag = ({ mode }) => {
     const timerRef = useRef(null);
 
     const config = {
-        'gr_f1':     { label: 'Gauging Room F1', endpoint: '/gr_f1' },
-        'mc_f1': { label: 'MC Gauging F1', endpoint: '/mc_f1' },
+        'gr_f1':     { label: 'Gauging Room F1', endpoint: '/gauging-room-f1' },
+        'mc_f1': { label: 'MC Gauging F1', endpoint: '/mc-gauging-f1' },
     }[mode];
 
     useEffect(() => {

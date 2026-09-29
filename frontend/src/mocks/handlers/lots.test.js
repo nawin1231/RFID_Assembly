@@ -76,29 +76,29 @@ describe('POST /register-tag', () => {
 describe('scan flow', () => {
     test('gr_f1 moves Before Issue to Gauging Room F1', async () => {
         const lot = lotAt(1);
-        expect((await post('/gr_f1', { tag_id: lot.tag_id })).data.result).toBe('OK');
+        expect((await post('/gauging-room-f1', { tag_id: lot.tag_id })).data.result).toBe('OK');
         expect(lot).toMatchObject({ status_id: 2, updated_at: '2026-09-29T10:00:00.000Z' });
     });
 
     test('mc_f1 before gr_f1 is INVALID_PROCESS and changes nothing', async () => {
         const lot = lotAt(1);
-        expect((await post('/mc_f1', { tag_id: lot.tag_id })).data.result).toBe('INVALID_PROCESS');
+        expect((await post('/mc-gauging-f1', { tag_id: lot.tag_id })).data.result).toBe('INVALID_PROCESS');
         expect(lot.status_id).toBe(1);
     });
 
     test('an unknown tag is TAG_NOT_FOUND', async () => {
-        expect((await post('/gr_f1', { tag_id: 'NOPE' })).data.result).toBe('TAG_NOT_FOUND');
+        expect((await post('/gauging-room-f1', { tag_id: 'NOPE' })).data.result).toBe('TAG_NOT_FOUND');
     });
 
     test('gr_f1 stores the reader location_name', async () => {
         const lot = lotAt(1);
-        await post('/gr_f1', { tag_id: lot.tag_id, location_name: 'GAUGING ROOM F1' });
+        await post('/gauging-room-f1', { tag_id: lot.tag_id, location_name: 'GAUGING ROOM F1' });
         expect(lot.location_name).toBe('GAUGING ROOM F1');
     });
 
     test('a scan without location_name clears it, like the real SP', async () => {
         const lot = lotAt(2);
-        await post('/mc_f1', { tag_id: lot.tag_id });
+        await post('/mc-gauging-f1', { tag_id: lot.tag_id });
         expect(lot.location_name).toBeNull();
     });
 });
@@ -131,8 +131,8 @@ describe('POST /completed', () => {
 test('full flow: register, scan GR, scan MC, clear', async () => {
     const lot = unregistered();
     await post('/register-tag', { ...lot, tag_id: 'FLOWTAG' });
-    await post('/gr_f1', { tag_id: 'FLOWTAG' });
-    await post('/mc_f1', { tag_id: 'FLOWTAG' });
+    await post('/gauging-room-f1', { tag_id: 'FLOWTAG' });
+    await post('/mc-gauging-f1', { tag_id: 'FLOWTAG' });
     expect((await post('/completed', { lot_no: lot.lot_no, emp_id: 'MOCK001' })).data.result).toBe('OK');
     expect((await callRoute(routes, 'GET', '/lot-by-tag/FLOWTAG')).status).toBe(404);
 });

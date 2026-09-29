@@ -68,8 +68,8 @@ export const lotRoutes = (db) => [
             return result('OK');
         },
     },
-    { method: 'POST', path: '/gr_f1', handler: advance(db, BEFORE_ISSUE, GAUGING_ROOM_F1) },
-    { method: 'POST', path: '/mc_f1', handler: advance(db, GAUGING_ROOM_F1, MC_GAUGING_F1) },
+    { method: 'POST', path: '/gauging-room-f1', handler: advance(db, BEFORE_ISSUE, GAUGING_ROOM_F1) },
+    { method: 'POST', path: '/mc-gauging-f1', handler: advance(db, GAUGING_ROOM_F1, MC_GAUGING_F1) },
     {
         method: 'POST',
         path: '/completed',

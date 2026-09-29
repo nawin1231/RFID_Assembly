@@ -31,9 +31,15 @@ function App() {
                         <SecureRoute adminOnly={true}><ClearTag /></SecureRoute>
                     } />
 
-                    <Route path="assembly/gauging-room-f1" element={<ScanTag mode="gr_f1" />} />
-                    <Route path="assembly/mc-gauging-f1" element={<ScanTag mode="mc_f1" />} />
-                    <Route path="assembly/reader-config" element={<ReaderConfig />} />
+                    <Route path="assembly/gauging-room-f1" element={
+                        <SecureRoute><ScanTag mode="gr_f1" /></SecureRoute>
+                    } />
+                    <Route path="assembly/mc-gauging-f1" element={
+                        <SecureRoute><ScanTag mode="mc_f1" /></SecureRoute>
+                    } />
+                    <Route path="assembly/reader-config" element={
+                        <SecureRoute adminOnly={true}><ReaderConfig /></SecureRoute>
+                    } />
                 </Route>
             </Routes>
         </BrowserRouter>

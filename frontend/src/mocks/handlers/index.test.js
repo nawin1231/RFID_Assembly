@@ -8,7 +8,7 @@ const CALLED_BY_APP = [
     ['GET', '/status'], ['POST', '/status'], ['PUT', '/status/1'], ['DELETE', '/status/1'],
     ['GET', '/process'], ['POST', '/process'], ['PUT', '/process/1'], ['DELETE', '/process/1'],
     ['GET', '/lot/DEMO000001'], ['GET', '/lot-by-lot/DEMO000001'], ['GET', '/lot-by-tag/E2801160'],
-    ['POST', '/register-tag'], ['POST', '/gr_f1'], ['POST', '/mc_f1'], ['POST', '/completed'],
+    ['POST', '/register-tag'], ['POST', '/gauging-room-f1'], ['POST', '/mc-gauging-f1'], ['POST', '/completed'],
     ['GET', '/clear-tag/history'],
     ['GET', '/dashboard'], ['GET', '/dashboard/process-summary'],
     ['GET', '/dashboard/history'], ['GET', '/dashboard/locations'],
