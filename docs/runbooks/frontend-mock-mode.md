@@ -8,9 +8,9 @@ Do not use it to test the real API or real data. All data is fake and lives in m
 - Node.js and npm, with `npm install` done in `frontend/`.
 - `frontend/.env` exists. First time: copy `frontend/.env.example` to `frontend/.env`. `.env` is git-ignored; `.env.example` lists every variable and is the guide.
 - Environment variables (names only):
-  - `REACT_APP_MOCK` — turns mock mode on. The `dev:mock` script sets it to `true`. `frontend/.env` keeps it `false` for normal runs and builds.
-  - `REACT_APP_MOCK_LATENCY` — fake network delay in ms. Optional.
-- Allowed environment: local dev server only. `npm run build` always drops the mock code, and fails if any mock code is left in `build/` (`scripts/check-no-mocks.mjs`).
+  - `VITE_MOCK` — turns mock mode on. The `dev:mock` script sets it to `true`. `frontend/.env` keeps it `false` for normal runs and builds.
+  - `VITE_MOCK_LATENCY` — fake network delay in ms. Optional.
+- Allowed environment: local dev server only. `npm run build` always drops the mock code, because `import.meta.env.DEV` is `false` in a production build. It also fails if any mock code is left in `build/` (`scripts/check-no-mocks.mjs`).
 
 ## Command
 Folder: `frontend/`
@@ -20,8 +20,8 @@ Folder: `frontend/`
 ## Parameters
 | Flag / mode | Meaning | Default | Example |
 |---|---|---|---|
-| `REACT_APP_MOCK` | `true` = axios uses the in-memory mock adapter. Any other value = real backend. Ignored in production builds | `false` (from `frontend/.env`) | set by `dev:mock` |
-| `REACT_APP_MOCK_LATENCY` | Delay in ms added to every mock response, to show loading states | `250` | `npx cross-env REACT_APP_MOCK=true REACT_APP_MOCK_LATENCY=1500 react-scripts start` |
+| `VITE_MOCK` | `true` = axios uses the in-memory mock adapter. Any other value = real backend. Ignored in production builds | `false` (from `frontend/.env`) | set by `dev:mock` |
+| `VITE_MOCK_LATENCY` | Delay in ms added to every mock response, to show loading states | `250` | `npx cross-env VITE_MOCK=true VITE_MOCK_LATENCY=1500 vite` |
 
 ## Demo data
 All values are fake.
@@ -52,13 +52,13 @@ These mirror the real API. The pages are not changed for mock mode.
 1. Add or update the Bruno request first. Build the mock response from its example response.
 2. Add a handler to `frontend/src/mocks/handlers/<domain>.js`. Contract: `({ params, query, body }) => ({ status?, data })`. `params` values are strings.
 3. Add the method and path to `CALLED_BY_APP` in `frontend/src/mocks/handlers/index.test.js`, and update the count in that test.
-4. Run `npm test -- --watchAll=false --testPathPattern=mocks` in `frontend/`.
+4. Run `npx vitest run src/mocks` in `frontend/`.
 
 ## Production safety check
 Automatic. `npm run build` runs `scripts/check-no-mocks.mjs` after the bundle is written. It fails the build if `build/**/*.js` contains `No mock for` or `MOCK001`.
 To prove the guard holds with the flag forced on (folder: `frontend/`):
 
-    $env:REACT_APP_MOCK='true'; npm run build; Remove-Item Env:REACT_APP_MOCK
+    $env:VITE_MOCK='true'; npm run build; Remove-Item Env:VITE_MOCK
 
 Pass: `check-no-mocks: OK`. Fail: the build exits with an error and lists the files. Do not ship. Check the mock guard in `src/index.jsx`.
 

@@ -3,7 +3,7 @@ import { vi } from 'vitest';
 
 beforeEach(() => {
     sessionStorage.clear();
-    vi.stubEnv('REACT_APP_MOCK_LATENCY', '0');
+    vi.stubEnv('VITE_MOCK_LATENCY', '0');
     vi.resetModules();
 });
 

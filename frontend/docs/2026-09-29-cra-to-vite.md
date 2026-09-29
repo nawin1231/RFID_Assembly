@@ -14,10 +14,10 @@
 
 | # | Task | Status | Model / where |
 |---|---|---|---|
-| 1 | Rename JSX files `.js` → `.jsx` | `[ ]` | Main session (Sonnet 5, medium) |
-| 2 | Move mock guard to entry + automatic bundle check | `[ ]` | Main session (Sonnet 5, high) |
-| 3 | Jest → Vitest | `[ ]` | Main session (Sonnet 5, medium) |
-| 4 | CRA → Vite dev server and build, `REACT_APP_*` → `VITE_*` | `[ ]` | Main session (Opus 5.5, high) |
+| 1 | Rename JSX files `.js` → `.jsx` | `[DONE]` | Main session (Sonnet 5, medium) |
+| 2 | Move mock guard to entry + automatic bundle check | `[DONE]` | Main session (Sonnet 5, high) |
+| 3 | Jest → Vitest | `[DONE]` | Main session (Sonnet 5, medium) |
+| 4 | CRA → Vite dev server and build, `REACT_APP_*` → `VITE_*` | `[~]` file edits done; install/run steps blocked (shell check failing) | Main session (Opus 5.5, high) |
 | 5 | ESLint flat config + README | `[ ]` | Main session (Sonnet 5, medium) |
 
 All tasks share decisions and build on each other, so all run in the main session. Run `/compact` before Task 4 if context is over 50%.
@@ -392,12 +392,12 @@ Principle bent: about 13 files, over the 5-file size. The switch cannot be split
 - Consumes: `vite.config.js` `test` block (Task 3), `scripts/check-no-mocks.mjs` (Task 2).
 - Produces: env names `VITE_MOCK`, `VITE_MOCK_LATENCY`, `VITE_API_BACKEND`. Scripts: `start`, `dev:mock`, `build`, `preview`, `test`.
 
-- [ ] **Step 1: Install**
+- [!] BLOCKED **Step 1: Install** — shell safety check returned no verdict (transient). Unblock: re-run, or the user runs it.
 
 Run: `npm i -D vite@^8 @vitejs/plugin-react@latest postcss autoprefixer`
 Then: `npm ls vite vitest @vitejs/plugin-react` — expected: one `vite@8.x`, no `UNMET PEER` / `invalid`. If `@vitejs/plugin-react@latest` does not accept Vite 8, stop and report (do not force install).
 
-- [ ] **Step 2: Move and update `index.html`**
+- [~] **Step 2: Move and update `index.html`** — `frontend/index.html` written; `public/index.html` not yet deleted (needs shell)
 
 Run: `Move-Item public/index.html index.html`
 
@@ -424,7 +424,7 @@ Then write `index.html`:
 </html>
 ```
 
-- [ ] **Step 3: Update `vite.config.js`**
+- [x] **Step 3: Update `vite.config.js`** — done, `vite.config.js:1-23`
 
 ```js
 import { defineConfig, loadEnv } from 'vite';
@@ -454,7 +454,7 @@ export default defineConfig(({ mode }) => {
 
 Note: `test` inside a `vite` `defineConfig` is read by Vitest; the import changes from `vitest/config` to `vite` because the config is now a function with `loadEnv`.
 
-- [ ] **Step 4: PostCSS and Tailwind config**
+- [x] **Step 4: PostCSS and Tailwind config** — `postcss.config.js` created, `tailwind.config.js:2`
 
 `postcss.config.js`:
 
@@ -469,7 +469,7 @@ export default {
 
 `tailwind.config.js` line 2: `module.exports = {` → `export default {`
 
-- [ ] **Step 5: Update `package.json`**
+- [x] **Step 5: Update `package.json`** — `"type": "module"` at `package.json:5`, scripts at `package.json:24-29`
 
 - Add top-level `"type": "module",` after `"private": true,`.
 - Scripts:
@@ -486,7 +486,7 @@ export default {
 
 - Keep `browserslist` (autoprefixer reads it). Keep `eslintConfig` for now (Task 5).
 
-- [ ] **Step 6: Env reads in source**
+- [x] **Step 6: Env reads in source** — `src/index.jsx:17`, `src/config/constance.js:2`, `src/mocks/config.js:1-3`
 
 `src/index.jsx`, guard line:
 
@@ -508,7 +508,7 @@ export const MOCK_LATENCY_MS = import.meta.env.VITE_MOCK_LATENCY === undefined
     : Number(import.meta.env.VITE_MOCK_LATENCY);
 ```
 
-- [ ] **Step 7: Env names in tests**
+- [x] **Step 7: Env names in tests** — `src/mocks/config.test.js:9,13,14`, `src/mocks/index.test.js:6`
 
 `src/mocks/config.test.js`: every `REACT_APP_MOCK_LATENCY` → `VITE_MOCK_LATENCY` (3 places, including the test name).
 `src/mocks/index.test.js`: `vi.stubEnv('REACT_APP_MOCK_LATENCY', '0')` → `vi.stubEnv('VITE_MOCK_LATENCY', '0')`.
@@ -518,7 +518,7 @@ export const MOCK_LATENCY_MS = import.meta.env.VITE_MOCK_LATENCY === undefined
 Run: `npm uninstall react-scripts`
 Then use the Grep tool: pattern `REACT_APP_|process\.env|react-scripts`, path `frontend`, glob `!{node_modules,build,docs}/**`. Expected: matches only in `vite.config.js` (the legacy check) and `.env.example` (the rename note, after Step 9). Any other match is a missed rename: fix it.
 
-- [ ] **Step 9: `.env.example`**
+- [x] **Step 9: `.env.example`** — whole file replaced
 
 Whole file:
 
@@ -570,7 +570,7 @@ If the dev build does **not** contain markers, the red test proves nothing: stop
 Run: `$env:REACT_APP_API_BACKEND='http://example.invalid'; npx vite build; "exit=$LASTEXITCODE"; Remove-Item Env:REACT_APP_API_BACKEND`
 Expected: error `Rename these env variables to VITE_*: REACT_APP_API_BACKEND` and a non-zero exit.
 
-- [ ] **Step 14: Update the runbook**
+- [x] **Step 14: Update the runbook** — `docs/runbooks/frontend-mock-mode.md:11-13,23-24,55,61`
 
 In `docs/runbooks/frontend-mock-mode.md` replace every `REACT_APP_MOCK_LATENCY` → `VITE_MOCK_LATENCY`, `REACT_APP_MOCK` → `VITE_MOCK`. Also:
 - Parameters table example: `npx cross-env VITE_MOCK=true VITE_MOCK_LATENCY=1500 vite`
