@@ -38,6 +38,18 @@ describe('lookups', () => {
     });
 });
 
+describe('unknown lookups', () => {
+    test('lot-by-lot returns 404 LOT_NOT_FOUND for an unknown lot', async () => {
+        const res = await callRoute(routes, 'GET', '/lot-by-lot/NOPE');
+        expect(res).toMatchObject({ status: 404, data: { error: 'LOT_NOT_FOUND' } });
+    });
+
+    test('lot-by-tag returns 404 TAG_NOT_FOUND for an unknown tag', async () => {
+        const res = await callRoute(routes, 'GET', '/lot-by-tag/NOPE');
+        expect(res).toMatchObject({ status: 404, data: { error: 'TAG_NOT_FOUND' } });
+    });
+});
+
 describe('POST /register-tag', () => {
     test('registers a new lot at Before Issue, stamped with the clock', async () => {
         const lot = unregistered();
@@ -78,6 +90,12 @@ describe('scan flow', () => {
         expect((await post('/gr_f1', { tag_id: 'NOPE' })).data.result).toBe('TAG_NOT_FOUND');
     });
 
+    test('gr_f1 stores the reader location_name', async () => {
+        const lot = lotAt(1);
+        await post('/gr_f1', { tag_id: lot.tag_id, location_name: 'GAUGING ROOM F1' });
+        expect(lot.location_name).toBe('GAUGING ROOM F1');
+    });
+
     test('a scan without location_name clears it, like the real SP', async () => {
         const lot = lotAt(2);
         await post('/mc_f1', { tag_id: lot.tag_id });
@@ -93,6 +111,12 @@ describe('POST /completed', () => {
         expect(lot).toMatchObject({
             status_id: 4, cleared_at: '2026-09-29T10:00:00.000Z', remark: '[FROM: MC Gauging F1]', emp_id: 'MOCK001',
         });
+    });
+
+    test('stores machine_no on the cleared lot', async () => {
+        const lot = lotAt(3);
+        await post('/completed', { lot_no: lot.lot_no, machine_no: 'MC-07' });
+        expect(lot.machine_no).toBe('MC-07');
     });
 
     test('rejects a lot not yet at MC Gauging F1', async () => {

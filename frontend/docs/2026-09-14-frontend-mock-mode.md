@@ -16,19 +16,19 @@
 
 | Task | Status | Notes |
 |---|---|---|
-| 1. Latency config + `dev:mock` script | [ ] | |
-| 2. Route matcher | [ ] | |
-| 3. Mock axios adapter | [ ] | |
-| 4. In-memory store + fixtures | [ ] | |
-| 5. Auth handlers + session seed | [ ] | parallel group A (after 4) |
-| 6. Lot / process-flow handlers | [ ] | parallel group A (after 4) |
-| 7. Dashboard handlers | [ ] | parallel group B (after 4) |
-| 8. Clear-tag history + mock-done handlers | [ ] | parallel group B (after 4) |
-| 9. Admin handlers (status, process, readers) | [ ] | parallel group B (after 4) |
-| 10. Route table + `installMockMode` | [ ] | after 5–9 |
-| 11. Wire into `instance.js` + bundle check + runbook | [ ] | after 10 |
-| 12. Sidebar nav entries (real, not mock-only) | [ ] | independent |
-| 13. Bruno collection into the repo + missing requests + example responses | [ ] | independent (added 2026-09-29, option A) |
+| 1. Latency config + `dev:mock` script | [x] | `mocks/config.js`, `package.json:25` |
+| 2. Route matcher | [x] | `mocks/router.js` |
+| 3. Mock axios adapter | [x] | `mocks/adapter.js`, jest axios mapper `package.json:29-33` |
+| 4. In-memory store + fixtures | [x] | `mocks/db.js`, `mocks/time.js`, `mocks/fixtures/*` |
+| 5. Auth handlers + session seed | [x] | `handlers/auth.js`, `mocks/session.js` |
+| 6. Lot / process-flow handlers | [x] | `handlers/lots.js` |
+| 7. Dashboard handlers | [x] | `handlers/dashboard.js` |
+| 8. Clear-tag history + mock-done handlers | [x] | `handlers/clearTag.js` |
+| 9. Admin handlers (status, process, readers) | [x] | `handlers/admin.js` |
+| 10. Route table + `installMockMode` | [x] | `handlers/index.js`, `mocks/index.js` |
+| 11. Wire into `instance.js` + bundle check + runbook | [x] | `config/instance.js:11` (NODE_ENV guard, option A), `.env.example`, runbook |
+| 12. Sidebar nav entries (real, not mock-only) | [x] | `Layout/Sidebar.js` |
+| 13. Bruno collection into the repo + missing requests + example responses | [x] | `bruno/AYT-RFID/` (33 requests) |
 
 ## Spec (inlined)
 
@@ -53,9 +53,9 @@ The script name still follows the standard: `dev:mock`.
 ## Global Constraints
 
 - No edits to any file under `src/pages/`. Pages must stay byte-identical.
-- Files touched outside `src/mocks/`: `src/config/instance.js` (one guarded block), `frontend/.env` (new), `frontend/package.json` (script, jest mapper), `src/components/Layout/Sidebar.js` (real nav entries, Task 12), `src/App.test.js` (deleted). Nothing else.
-- In `instance.js`, the mock branch must be `if (process.env.REACT_APP_MOCK === 'true') { require('../mocks')... }`. Do not use a static `import`, and do not use a constant imported from another module. Only this form lets the minifier drop the mocks tree.
-- `frontend/.env` holds `REACT_APP_MOCK=false`, so the key is always defined at build time. The `dev:mock` script overrides it through `cross-env`, because dotenv never overrides a variable that is already set.
+- Files touched outside `src/mocks/`: `src/config/instance.js` (one guarded block), `frontend/.env.example` (new), `frontend/package.json` (script, jest mapper), `src/components/Layout/Sidebar.js` (real nav entries, Task 12), `src/App.test.js` (deleted). Nothing else.
+- In `instance.js`, the mock branch must be `if (process.env.NODE_ENV !== 'production' && process.env.REACT_APP_MOCK === 'true') { require('../mocks')... }`. Do not use a static `import`, and do not use a constant imported from another module. Only this form lets the minifier drop the mocks tree.
+- (Changed during execution, user decision, option A.) The `NODE_ENV` check makes the drop independent of any env file: `NODE_ENV` is always defined in a build, while `REACT_APP_MOCK` is not when `.env` is missing (`.env` is git-ignored). `frontend/.env.example` (committed) documents the variables; the developer copies it to `.env`. The `dev:mock` script sets `REACT_APP_MOCK=true` through `cross-env`, because dotenv never overrides a variable that is already set.
 - No new runtime dependency. `cross-env@^7.0.3` is already in devDependencies.
 - Mock route paths match **what the frontend calls**, not `backend/routes/assembly.js`. They differ: `ScanTag` posts to `/gr_f1` and `/mc_f1`, while the backend exposes `/gauging-room-f1` and `/mc-gauging-f1`.
 - The API base URL stays `http://localhost:5001/api/assembly` (`src/config/constance.js`). The adapter strips it.
@@ -127,7 +127,7 @@ Handlers are factories that take `db` (dependency injection). Tests build a fres
 - Consumes: nothing.
 - Produces: `MOCK_LATENCY_MS: number` (named export) from `src/mocks/config.js`.
 
-- [ ] **Step 1: Verify dependencies**
+- [x] **Step 1: Verify dependencies**
 
 `node_modules/` and `cross-env` are already installed (uncommitted `package.json` diff).
 
@@ -136,7 +136,7 @@ npm ls cross-env
 ```
 Expected: `cross-env@7.x`. If it is missing, run `npm install --save-dev cross-env@^7.0.3`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `frontend/src/mocks/config.test.js`:
 
@@ -168,12 +168,12 @@ describe('mock config', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/config`
 Expected: FAIL with `Cannot find module './config'`.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 Create `frontend/src/mocks/config.js`:
 
@@ -183,12 +183,12 @@ export const MOCK_LATENCY_MS = process.env.REACT_APP_MOCK_LATENCY === undefined
     : Number(process.env.REACT_APP_MOCK_LATENCY);
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/config`
 Expected: PASS, 2 tests.
 
-- [ ] **Step 6: Add the mock start script**
+- [x] **Step 6: Add the mock start script**
 
 In `frontend/package.json` `"scripts"`, keep the existing four and add:
 
@@ -196,7 +196,7 @@ In `frontend/package.json` `"scripts"`, keep the existing four and add:
 "dev:mock": "cross-env REACT_APP_MOCK=true react-scripts start"
 ```
 
-- [ ] **Step 7: Delete the stale CRA boilerplate test**
+- [x] **Step 7: Delete the stale CRA boilerplate test**
 
 `src/App.test.js` is the unchanged CRA sample. It looks for a "learn react" link that this app never renders, so it always fails and would hide real failures.
 
@@ -204,12 +204,12 @@ In `frontend/package.json` `"scripts"`, keep the existing four and add:
 Remove-Item src/App.test.js
 ```
 
-- [ ] **Step 8: Verify the whole suite is green**
+- [x] **Step 8: Verify the whole suite is green**
 
 Run: `npm test -- --watchAll=false`
 Expected: PASS, 1 suite, 2 tests.
 
-- [ ] **Step 9: Hand off**
+- [x] **Step 9: Hand off**
 
 Changed: `frontend/package.json`, `frontend/package-lock.json`, `frontend/src/mocks/config.js`, `frontend/src/mocks/config.test.js`. Deleted: `frontend/src/App.test.js`.
 Suggested message: `chore(frontend): add mock latency config and dev:mock script`
@@ -229,7 +229,7 @@ Suggested message: `chore(frontend): add mock latency config and dev:mock script
   - `matchRoute(routes: Route[], method: string, path: string) => { handler, params } | null`. It returns the **first** match, so list static routes before param routes of the same shape. It returns `null` if a param cannot be URL-decoded.
   - `Route = { method: 'GET'|'POST'|'PUT'|'DELETE', path: string, handler: Function }`, where `path` may contain `:name` segments.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/router.test.js`:
 
@@ -305,12 +305,12 @@ describe('matchRoute', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/router`
 Expected: FAIL with `Cannot find module './router'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/router.js`:
 
@@ -360,12 +360,12 @@ export const matchRoute = (routes, method, path) => {
 };
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/router`
 Expected: PASS, 13 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/router.js`, `frontend/src/mocks/router.test.js`.
 Suggested message: `feat(frontend): add mock route matcher`
@@ -383,7 +383,7 @@ Suggested message: `feat(frontend): add mock route matcher`
 - Consumes: `normalizePath`, `matchRoute` from `./router` (Task 2).
 - Produces: `createMockAdapter(routes: Route[], latencyMs = 0) => (config) => Promise<AxiosResponse>`. It resolves when `config.validateStatus(status)` is true. Otherwise it rejects with an `AxiosError` whose `.response` holds `{ status, data }`, like a real server error. An unmatched request gives a 404 `{ error: 'NO_MOCK', message }` and a `console.warn`.
 
-- [ ] **Step 1: Map axios to its CommonJS build for jest**
+- [x] **Step 1: Map axios to its CommonJS build for jest**
 
 axios 1.x ships ES modules, and CRA's jest 27 does not transform `node_modules`. Without this mapping, the test fails with `Cannot use import statement outside a module`. Add this top-level key to `frontend/package.json` (CRA allows `moduleNameMapper` overrides):
 
@@ -397,7 +397,7 @@ axios 1.x ships ES modules, and CRA's jest 27 does not transform `node_modules`.
 
 This only affects jest. The browser build still resolves axios through its `browser` field.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `frontend/src/mocks/adapter.test.js`:
 
@@ -465,12 +465,12 @@ describe('createMockAdapter', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/adapter`
 Expected: FAIL with `Cannot find module './adapter'`.
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 Create `frontend/src/mocks/adapter.js`:
 
@@ -513,12 +513,12 @@ export const createMockAdapter = (routes, latencyMs = 0) => async (config) => {
 };
 ```
 
-- [ ] **Step 5: Run the test to verify it passes**
+- [x] **Step 5: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/adapter`
 Expected: PASS, 6 tests.
 
-- [ ] **Step 6: Hand off**
+- [x] **Step 6: Hand off**
 
 Changed: `frontend/package.json`, `frontend/src/mocks/adapter.js`, `frontend/src/mocks/adapter.test.js`.
 Suggested message: `feat(frontend): add mock axios adapter`
@@ -560,7 +560,7 @@ Suggested message: `feat(frontend): add mock axios adapter`
   - `testUtils.js`: `FIXED_NOW` (local `2026-09-29 10:00:00`), `createTestDb()`, `callRoute(routes, method, path, { query, body }) => Promise<{ status, data }>`.
   - Status ids: `1` bf_issue, `2` gr_f1, `3` mc_f1, `4` completed. The real stored procedures hard-code these ids.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/db.test.js`:
 
@@ -634,12 +634,12 @@ describe('nextId', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/db`
 Expected: FAIL with `Cannot find module './db'`.
 
-- [ ] **Step 3: Write `time.js`**
+- [x] **Step 3: Write `time.js`**
 
 Create `frontend/src/mocks/time.js`:
 
@@ -656,7 +656,7 @@ export const daysAgo = (today, days, hours, minutes = 0) =>
     toWallClock(new Date(today.getFullYear(), today.getMonth(), today.getDate() - days, hours, minutes));
 ```
 
-- [ ] **Step 4: Write the fixtures**
+- [x] **Step 4: Write the fixtures**
 
 Create `frontend/src/mocks/fixtures/master.js`:
 
@@ -760,7 +760,7 @@ export const buildReaderConfig = () => [
 ];
 ```
 
-- [ ] **Step 5: Write `db.js`**
+- [x] **Step 5: Write `db.js`**
 
 Create `frontend/src/mocks/db.js`:
 
@@ -789,7 +789,7 @@ export const createDb = ({ now = () => new Date() } = {}) => {
 };
 ```
 
-- [ ] **Step 6: Write `testUtils.js`**
+- [x] **Step 6: Write `testUtils.js`**
 
 Create `frontend/src/mocks/testUtils.js`:
 
@@ -809,12 +809,12 @@ export const callRoute = async (routes, method, path, { query = {}, body = {} } 
 };
 ```
 
-- [ ] **Step 7: Run the test to verify it passes**
+- [x] **Step 7: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/db`
 Expected: PASS, 11 tests.
 
-- [ ] **Step 8: Hand off**
+- [x] **Step 8: Hand off**
 
 Changed: `frontend/src/mocks/time.js`, `db.js`, `testUtils.js`, `db.test.js`, `fixtures/master.js`, `fixtures/users.js`, `fixtures/lots.js`, `fixtures/mockDone.js`, `fixtures/readers.js`.
 Suggested message: `feat(frontend): add mock in-memory store and fixtures`
@@ -840,7 +840,7 @@ Suggested message: `feat(frontend): add mock in-memory store and fixtures`
   - `PUT` changes only `eng_name`, `eng_surname` and `position`.
   - Create / update / delete always return `{ result: 'OK' }`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `frontend/src/mocks/handlers/auth.test.js`:
 
@@ -919,12 +919,12 @@ test('keeps an existing session', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `npm test -- --watchAll=false --testPathPattern="mocks/(handlers/auth|session)"`
 Expected: FAIL with `Cannot find module './auth'` and `Cannot find module './session'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/auth.js`:
 
@@ -990,12 +990,12 @@ export const seedMockSession = (users) => {
 };
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `npm test -- --watchAll=false --testPathPattern="mocks/(handlers/auth|session)"`
 Expected: PASS, 8 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/handlers/auth.js`, `auth.test.js`, `frontend/src/mocks/session.js`, `session.test.js`.
 Suggested message: `feat(frontend): add mock auth handlers and session seed`
@@ -1025,7 +1025,7 @@ Suggested message: `feat(frontend): add mock auth handlers and session seed`
 
 All results use HTTP 200 `{ result }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/handlers/lots.test.js`:
 
@@ -1146,12 +1146,12 @@ test('full flow: register, scan GR, scan MC, clear', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/lots`
 Expected: FAIL with `Cannot find module './lots'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/lots.js`:
 
@@ -1246,12 +1246,12 @@ export const lotRoutes = (db) => [
 ];
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/lots`
 Expected: PASS, 16 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/handlers/lots.js`, `lots.test.js`.
 Suggested message: `feat(frontend): add mock lot and process-flow handlers`
@@ -1273,7 +1273,7 @@ Suggested message: `feat(frontend): add mock lot and process-flow handlers`
   - `/dashboard/history` returns active lots with `label_status`, filtered case-insensitively ("contains", like SQL `LIKE '%x%'`) on `brg_type`, `wos`, `lot_no`, `location_name`. It filters exactly on `status_id`, and by `created_at` date between `date_from` and `date_to` inclusive. Newest `updated_at` first, max 200 rows.
   - `/dashboard/locations` returns `[{ location_name }]` for each reader with a non-empty name.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/handlers/dashboard.test.js`:
 
@@ -1362,12 +1362,12 @@ describe('GET /dashboard/locations', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/dashboard`
 Expected: FAIL with `Cannot find module './dashboard'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/dashboard.js`:
 
@@ -1453,12 +1453,12 @@ export const dashboardRoutes = (db) => [
 ];
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/dashboard`
 Expected: PASS, 9 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/handlers/dashboard.js`, `dashboard.test.js`.
 Suggested message: `feat(frontend): add mock dashboard handlers`
@@ -1478,7 +1478,7 @@ Suggested message: `feat(frontend): add mock dashboard handlers`
   - `/clear-tag/history` returns completed lots with `cleared_at` date inside `[date_from, date_to]`, newest first, max 200. Row shape: `{ lot_no, tag_id, emp_id, remark, cleared_at, updated_at, brg_type, spec }`.
   - `/mock-done` (`backend/services/mockService.js`): the list is newest first. `POST` returns `{ result: 'OK' | 'ALREADY_EXISTS' }`. `DELETE` returns `{ result: 'OK' | 'NOT_FOUND' }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/handlers/clearTag.test.js`:
 
@@ -1538,12 +1538,12 @@ describe('/mock-done', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/clearTag`
 Expected: FAIL with `Cannot find module './clearTag'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/clearTag.js`:
 
@@ -1600,12 +1600,12 @@ export const clearTagRoutes = (db) => [
 ];
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/clearTag`
 Expected: PASS, 5 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/handlers/clearTag.js`, `clearTag.test.js`.
 Suggested message: `feat(frontend): add mock clear-tag history and mock-done handlers`
@@ -1629,7 +1629,7 @@ Suggested message: `feat(frontend): add mock clear-tag history and mock-done han
   - `GET /readers-status` returns `{ readers: [{ type, connected }] }`. The mock treats `enabled` readers as connected.
   - `PUT /readers-config` replaces the whole list. `POST /readers-restart` returns `{ result: 'OK' }`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/mocks/handlers/admin.test.js`:
 
@@ -1714,12 +1714,12 @@ describe('readers', () => {
 });
 ```
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/admin`
 Expected: FAIL with `Cannot find module './admin'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/admin.js`:
 
@@ -1840,12 +1840,12 @@ export const adminRoutes = (db) => [
 ];
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=mocks/handlers/admin`
 Expected: PASS, 11 tests.
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Changed: `frontend/src/mocks/handlers/admin.js`, `admin.test.js`.
 Suggested message: `feat(frontend): add mock status, process and reader handlers`
@@ -1866,7 +1866,7 @@ Suggested message: `feat(frontend): add mock status, process and reader handlers
   - `createRoutes(db) => Route[]`.
   - `installMockMode(api: AxiosInstance) => void`: creates one store, installs the adapter on `api`, and seeds the admin session. This is the only entry point `instance.js` uses.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `frontend/src/mocks/handlers/index.test.js`. The list below holds every method + path the app calls today (34 call sites, 32 pairs). When a page adds a call, add it here too.
 
@@ -1943,12 +1943,12 @@ test('a mutation through the API shows on the dashboard', async () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `npm test -- --watchAll=false --testPathPattern="mocks/(handlers/)?index"`
 Expected: FAIL with `Cannot find module './index'`.
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 Create `frontend/src/mocks/handlers/index.js`:
 
@@ -1984,17 +1984,17 @@ export const installMockMode = (api) => {
 };
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `npm test -- --watchAll=false --testPathPattern="mocks/(handlers/)?index"`
 Expected: PASS, 36 tests (34 + 2).
 
-- [ ] **Step 5: Run the whole suite**
+- [x] **Step 5: Run the whole suite**
 
 Run: `npm test -- --watchAll=false`
 Expected: PASS, 12 suites, 117 tests, no failures.
 
-- [ ] **Step 6: Hand off**
+- [x] **Step 6: Hand off**
 
 Changed: `frontend/src/mocks/handlers/index.js`, `handlers/index.test.js`, `frontend/src/mocks/index.js`, `index.test.js`.
 Suggested message: `feat(frontend): add mock route table and installMockMode`
@@ -2006,14 +2006,14 @@ Suggested message: `feat(frontend): add mock route table and installMockMode`
 **Files:**
 - Modify: `frontend/src/config/instance.js`
 - Create: `frontend/src/config/instance.test.js`
-- Create: `frontend/.env`
+- Create: `frontend/.env.example` (was `frontend/.env`; changed during execution)
 - Create: `docs/runbooks/frontend-mock-mode.md` (repo root, via the `runbook-docs` skill)
 
 **Interfaces:**
 - Consumes: `installMockMode` from `src/mocks` (Task 10).
 - Produces: `backendApi` uses the mock adapter only when `REACT_APP_MOCK` is exactly `'true'`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `frontend/src/config/instance.test.js`:
 
@@ -2047,12 +2047,12 @@ test.each([undefined, 'false', '1'])('keeps the real adapter when REACT_APP_MOCK
 
 (axios 1.x's default adapter is the array `['xhr', 'http', 'fetch']`. Ours is a function.)
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 Run: `npm test -- --watchAll=false --testPathPattern=config/instance`
 Expected: FAIL. The `"true"` case gets an array adapter.
 
-- [ ] **Step 3: Wire the adapter**
+- [x] **Step 3: Wire the adapter**
 
 Replace `frontend/src/config/instance.js` with:
 
@@ -2071,20 +2071,16 @@ if (process.env.REACT_APP_MOCK === 'true') {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it passes**
+- [x] **Step 4: Run the test to verify it passes**
 
 Run: `npm test -- --watchAll=false --testPathPattern=config/instance`
-Expected: PASS, 4 tests.
+Expected: PASS, 5 tests (the production-build test was added with option A).
 
-- [ ] **Step 5: Add `frontend/.env`**
+- [x] **Step 5: Add `frontend/.env.example`** (changed during execution)
 
-```
-REACT_APP_MOCK=false
-```
+`.env` is git-ignored (root `.gitignore:2`) and Claude may not write it. So the guide `frontend/.env.example` is committed instead, with `REACT_APP_MOCK=false` and a commented `REACT_APP_MOCK_LATENCY`. Bundle safety comes from the `NODE_ENV !== 'production'` guard (option A), plus a test for it (5 tests in `instance.test.js`, full suite 13 suites / 122 tests).
 
-This keeps the key defined at build time, so webpack folds `"false" === 'true'` and removes the branch. It holds no secret. `.env` is not in `.gitignore`, so it gets committed.
-
-- [ ] **Step 6: Prove the mocks are not in the production bundle**
+- [x] **Step 6: Prove the mocks are not in the production bundle**
 
 ```powershell
 npm run build
@@ -2102,7 +2098,7 @@ Expected: `Count` greater than 0 for the mock build. The final `npm run build` p
 
 If the first count is not 0, **stop**. The dead-code removal failed. Do not ship. Report back with the build output.
 
-- [ ] **Step 7: Manual smoke test in the browser**
+- [x] **Step 7: Manual smoke test in the browser**
 
 Run `npm run dev:mock` and check each item:
 
@@ -2119,7 +2115,7 @@ Run `npm run dev:mock` and check each item:
 | `/assembly/reader-config` | 2 readers, GR F1 "Connected"; Save succeeds |
 | Navbar sign-out, then open `/assembly/management` | Login with `MOCK001` / `DEMO1234` works |
 
-- [ ] **Step 8: Write the runbook**
+- [x] **Step 8: Write the runbook**
 
 Use the `runbook-docs` skill to write `docs/runbooks/frontend-mock-mode.md`. It must include:
 
@@ -2132,14 +2128,14 @@ Use the `runbook-docs` skill to write `docs/runbooks/frontend-mock-mode.md`. It 
 - The "Known limitations" table from this plan.
 - How to add a mock for a new endpoint: a handler in `src/mocks/handlers/<domain>.js` plus a line in `CALLED_BY_APP`.
 
-- [ ] **Step 9: Run the full check**
+- [x] **Step 9: Run the full check**
 
 Run: `npm test -- --watchAll=false`, then `npm run build`.
-Expected: all tests PASS (13 suites, 121 tests) and the build succeeds with no new warnings.
+Expected: all tests PASS (13 suites, 122 tests) and the build succeeds with no new warnings.
 
-- [ ] **Step 10: Hand off**
+- [x] **Step 10: Hand off**
 
-Changed: `frontend/src/config/instance.js`, `frontend/src/config/instance.test.js`, `frontend/.env`, `docs/runbooks/frontend-mock-mode.md`.
+Changed: `frontend/src/config/instance.js`, `frontend/src/config/instance.test.js`, `frontend/.env.example`, `docs/runbooks/frontend-mock-mode.md`.
 Suggested message: `feat(frontend): enable mock mode via dev:mock`
 
 ---
@@ -2155,7 +2151,7 @@ Suggested message: `feat(frontend): enable mock mode via dev:mock`
 
 Decision (2026-09-29): the three routes become normal nav entries, not mock-only. Sidebar has no test coverage today, so no test is added (house rule: add tests on edit only when the file already has coverage).
 
-- [ ] **Step 1: Add the icons**
+- [x] **Step 1: Add the icons**
 
 In the `@ant-design/icons` import, add `ToolOutlined` and `ApiOutlined`:
 
@@ -2172,7 +2168,7 @@ import {
 } from '@ant-design/icons';
 ```
 
-- [ ] **Step 2: Add the nav entries**
+- [x] **Step 2: Add the nav entries**
 
 Replace `navItems` with:
 
@@ -2189,11 +2185,11 @@ Replace `navItems` with:
     ];
 ```
 
-- [ ] **Step 3: Verify**
+- [x] **Step 3: Verify**
 
 Run `npm run build`: it must succeed with no new warnings. Then, in `npm run dev:mock`, click each of the 8 entries and confirm the active highlight follows.
 
-- [ ] **Step 4: Hand off**
+- [x] **Step 4: Hand off**
 
 Changed: `frontend/src/components/Layout/Sidebar.js`.
 Suggested message: `feat(frontend): link scan and reader-config pages in the sidebar`
@@ -2221,20 +2217,20 @@ Suggested message: `feat(frontend): link scan and reader-config pages in the sid
 
 **Steps:**
 
-- [ ] **Step 1: Copy the collection.** Copy the 19 files to `bruno/AYT-RFID/`.
-- [ ] **Step 2: Replace real-looking data in the copies.**
+- [x] **Step 1: Copy the collection.** Copy the 19 files to `bruno/AYT-RFID/`.
+- [x] **Step 2: Replace real-looking data in the copies.**
   - `TH9H92698` → `DEMO000001` (in `Create Mock Lot.yml`, `Delete Mock Lots.yml`, `Get All Mock Lot.yml`, `Get One lot.yml`).
   - `Login.yml` body: `E001` / `changeme` → `MOCK001` / `DEMO1234`.
   - `User - Create.yml` body: `TEST01` / `changeme` → `MOCK099` / `DEMO1234`.
   - `Get All Mock Lot.yml`: remove the request body (a GET sends none).
-- [ ] **Step 3: Add the 16 missing requests**, seq 18 onward, file name `<Area> - <Action>.yml`:
+- [x] **Step 3: Add the 16 missing requests**, seq 18 onward, file name `<Area> - <Action>.yml`:
   `GET /lot-by-tag/:tag_id`, `GET /lot-by-lot/:lot_no`, `POST /register-tag`, `POST /gauging-room-f1`, `POST /mc-gauging-f1`, `POST /change-process`, `POST /completed`, `GET /readers-config`, `PUT /readers-config`, `GET /readers-status`, `POST /readers-restart`, `GET /dashboard`, `GET /dashboard/history` (with query params `date_from`, `date_to`, `brg_type`, `wos`, `lot_no`, `status_id`, `location_name`), `GET /dashboard/process-summary`, `GET /dashboard/locations`, `GET /clear-tag/history` (query `date_from`, `date_to`).
-- [ ] **Step 4: Add a `docs:` block** with example responses to all 33 request files.
-- [ ] **Step 5: Check.**
+- [x] **Step 4: Add a `docs:` block** with example responses to all 33 request files.
+- [x] **Step 5: Check.**
   - Every route in `backend/routes/assembly.js` (not the commented-out ones) has exactly one request file, with matching method and path.
   - `Select-String -Path bruno/AYT-RFID/*.yml -Pattern "TH9H","changeme","E001"` returns nothing.
   - Every file parses as YAML: `node -e "const y=require('yaml');..."` is not available, so use `npx --yes yaml-lint bruno/AYT-RFID/*.yml` if it works offline; otherwise, report that the check was skipped.
-- [ ] **Step 6: Hand off.** Do not send any request. The user runs Bruno against a real backend. Suggested message: `docs(api): move Bruno collection into repo and document all assembly routes`
+- [x] **Step 6: Hand off.** Do not send any request. The user runs Bruno against a real backend. Suggested message: `docs(api): move Bruno collection into repo and document all assembly routes`
 
 ---
 

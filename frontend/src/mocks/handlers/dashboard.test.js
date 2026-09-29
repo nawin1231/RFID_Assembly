@@ -17,6 +17,21 @@ describe('GET /dashboard', () => {
         expect(summary.bf_issue).toBeGreaterThan(0);
     });
 
+    test('status_id filter keeps only that step, sent as a string', async () => {
+        const { summary } = await get('/dashboard', { status_id: '2' });
+        expect(summary.gr_f1).toBeGreaterThan(0);
+        expect(summary).toMatchObject({ bf_issue: 0, mc_f1: 0, total_qty: summary.gr_f1 });
+    });
+
+    test('brg_type and date filters narrow the totals', async () => {
+        const all = (await get('/dashboard')).summary;
+        const none = (await get('/dashboard', { brg_type: 'NO-SUCH-PART' })).summary;
+        const past = (await get('/dashboard', { date_to: '2000-01-01' })).summary;
+        expect(all.total_qty).toBeGreaterThan(0);
+        expect(none.total_qty).toBe(0);
+        expect(past.total_qty).toBe(0);
+    });
+
     test('reflects a change in the store', async () => {
         const before = (await get('/dashboard')).summary;
         db.lots.find((l) => l.status_id === 1).status_id = 2;

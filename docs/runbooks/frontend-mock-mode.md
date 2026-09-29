@@ -6,10 +6,11 @@ Do not use it to test the real API or real data. All data is fake and lives in m
 
 ## Prerequisites
 - Node.js and npm, with `npm install` done in `frontend/`.
+- `frontend/.env` exists. First time: copy `frontend/.env.example` to `frontend/.env`. `.env` is git-ignored; `.env.example` lists every variable and is the guide.
 - Environment variables (names only):
   - `REACT_APP_MOCK` — turns mock mode on. The `dev:mock` script sets it to `true`. `frontend/.env` keeps it `false` for normal runs and builds.
   - `REACT_APP_MOCK_LATENCY` — fake network delay in ms. Optional.
-- Allowed environment: local only. Never point mock mode at a real API, and never ship a build made with `REACT_APP_MOCK=true`.
+- Allowed environment: local dev server only. `npm run build` always drops the mock code (`NODE_ENV=production`), so mock mode cannot run from a production build.
 
 ## Command
 Folder: `frontend/`
@@ -19,7 +20,7 @@ Folder: `frontend/`
 ## Parameters
 | Flag / mode | Meaning | Default | Example |
 |---|---|---|---|
-| `REACT_APP_MOCK` | `true` = axios uses the in-memory mock adapter. Any other value = real backend | `false` (from `frontend/.env`) | set by `dev:mock` |
+| `REACT_APP_MOCK` | `true` = axios uses the in-memory mock adapter. Any other value = real backend. Ignored in production builds | `false` (from `frontend/.env`) | set by `dev:mock` |
 | `REACT_APP_MOCK_LATENCY` | Delay in ms added to every mock response, to show loading states | `250` | `npx cross-env REACT_APP_MOCK=true REACT_APP_MOCK_LATENCY=1500 react-scripts start` |
 
 ## Demo data
@@ -54,12 +55,12 @@ These mirror the real API. The pages are not changed for mock mode.
 4. Run `npm test -- --watchAll=false --testPathPattern=mocks` in `frontend/`.
 
 ## Production safety check
-Run after changes to `src/config/instance.js` or `frontend/.env`. Folder: `frontend/`
+Run after changes to `src/config/instance.js` or `src/mocks/`. Folder: `frontend/`. The build forces the flag on, to prove the guard holds even then.
 
-    npm run build
+    $env:REACT_APP_MOCK='true'; npm run build; Remove-Item Env:REACT_APP_MOCK
     Select-String -Path build/static/js/*.js -Pattern "MOCK001","No mock for" | Measure-Object
 
-Pass: `Count : 0`. Any other count means the mock code is in the production bundle. Do not ship.
+Pass: `Count : 0`. Any other count means the mock code is in the production bundle. Do not ship. Check the `NODE_ENV !== 'production'` guard in `src/config/instance.js`.
 
 ## Expected output
 - Pass: the dev server opens the app. Screens show demo data. No request goes to the backend.
