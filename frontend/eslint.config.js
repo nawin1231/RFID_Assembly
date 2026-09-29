@@ -18,8 +18,9 @@ export default defineConfig([
             'react-hooks/rules-of-hooks': 'error',
             'react-hooks/exhaustive-deps': 'warn',
             'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+            // Warn, as CRA did. Existing dead code is a separate cleanup.
             // Components used only in JSX look unused to core ESLint.
-            'no-unused-vars': ['error', { varsIgnorePattern: '^[A-Z_]' }],
+            'no-unused-vars': ['warn', { varsIgnorePattern: '^[A-Z_]' }],
         },
     },
     {

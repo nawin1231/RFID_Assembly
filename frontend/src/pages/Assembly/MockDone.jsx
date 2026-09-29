@@ -30,7 +30,9 @@ const MockDone = () => {
     try {
       const res = await backendApi.get('/mock-done');
       setList(res.data);
-    } catch { }
+    } catch (err) {
+      console.error('fetchList failed', err);
+    }
   };
 
   const handleAdd = async (e) => {
@@ -59,7 +61,9 @@ const MockDone = () => {
     try {
       await backendApi.delete(`/mock-done/${lot_no}`);
       fetchList();
-    } catch { }
+    } catch (err) {
+      console.error('handleDelete failed', err);
+    }
   };
 
   return (

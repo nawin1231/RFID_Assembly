@@ -26,7 +26,9 @@ const ReaderConfig = () => {
         try {
             const res = await backendApi.get('/readers-status');
             setStatus(res.data.readers || []);
-        } catch { }
+        } catch (err) {
+            console.error('fetchStatus failed', err);
+        }
     };
 
     const handleChange = (index, field, value) => {
