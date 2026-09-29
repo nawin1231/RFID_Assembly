@@ -1,17 +1,14 @@
 import axios from 'axios';
+import { vi } from 'vitest';
 
 beforeEach(() => {
     sessionStorage.clear();
-    process.env.REACT_APP_MOCK_LATENCY = '0';
-    jest.resetModules();
-});
-
-afterEach(() => {
-    delete process.env.REACT_APP_MOCK_LATENCY;
+    vi.stubEnv('REACT_APP_MOCK_LATENCY', '0');
+    vi.resetModules();
 });
 
 test('installs the adapter and seeds the admin session', async () => {
-    const { installMockMode } = require('./index');
+    const { installMockMode } = await import('./index');
     const api = axios.create({ baseURL: 'http://localhost:5001/api/assembly' });
     installMockMode(api);
 
@@ -21,7 +18,7 @@ test('installs the adapter and seeds the admin session', async () => {
 });
 
 test('a mutation through the API shows on the dashboard', async () => {
-    const { installMockMode } = require('./index');
+    const { installMockMode } = await import('./index');
     const api = axios.create({ baseURL: 'http://localhost:5001/api/assembly' });
     installMockMode(api);
 

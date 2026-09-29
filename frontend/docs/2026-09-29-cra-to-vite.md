@@ -59,7 +59,7 @@ Stays `.js`: everything in `src/mocks/`, `src/config/`, `reportWebVitals.js`, `s
 
 Principle bent: 19 files > 5-file task size. It is one mechanical rename with zero content change, so it stays one task.
 
-- [ ] **Step 1: Rename the files**
+- [x] **Step 1: Rename the files**
 
 Run in `frontend/` (PowerShell `Move-Item`, not `git mv`, because `git mv` stages):
 
@@ -75,12 +75,12 @@ $files = @(
 foreach ($f in $files) { Move-Item $f ($f -replace '\.js$', '.jsx') }
 ```
 
-- [ ] **Step 2: Check no JSX is left in `.js` files**
+- [x] **Step 2: Check no JSX is left in `.js` files**
 
 Use the Grep tool: pattern `return \(|<[A-Z][A-Za-z]*[ />]|</`, path `frontend/src`, glob `*.js`.
 Expected: no matches.
 
-- [ ] **Step 3: Run tests**
+- [x] **Step 3: Run tests**
 
 Run: `$env:CI='true'; npx react-scripts test --watchAll=false`
 Expected: 13 suites / 128 tests pass.
@@ -90,7 +90,7 @@ Expected: 13 suites / 128 tests pass.
 Run: `npm run build`
 Expected: `Compiled successfully` (warnings that existed before are fine).
 
-- [ ] **Step 5: Hand off**
+- [x] **Step 5: Hand off**
 
 Show `git status` to the user. Suggested commit: `refactor(frontend): rename JSX files to .jsx`.
 
@@ -114,7 +114,7 @@ The unit test for the guard (`src/config/instance.test.js`) goes away, because `
 - Consumes: `installMockMode(api)` from `src/mocks/index.js` (unchanged), `backendApi` from `src/config/instance.js`.
 - Produces: `node scripts/check-no-mocks.mjs [dir]` — `dir` defaults to `build`. Exit code 0 = clean, 1 = marker found (prints file and marker), 2 = folder missing.
 
-- [ ] **Step 1: Write the check script**
+- [x] **Step 1: Write the check script**
 
 `scripts/check-no-mocks.mjs`:
 
@@ -149,7 +149,7 @@ if (hits.length > 0) {
 console.log(`check-no-mocks: OK (${jsFiles.length} JS files checked)`);
 ```
 
-- [ ] **Step 2: Prove the script fails on a marker (red)**
+- [x] **Step 2: Prove the script fails on a marker (red)**
 
 Run:
 
@@ -164,7 +164,7 @@ Expected: prints `...a.js: "No mock for"` and `exit=1`.
 
 (The `Set-Content` line writes a throwaway test file in the temp folder, not project content.)
 
-- [ ] **Step 3: Wire it into the build**
+- [x] **Step 3: Wire it into the build**
 
 `package.json` scripts:
 
@@ -172,7 +172,7 @@ Expected: prints `...a.js: "No mock for"` and `exit=1`.
 "build": "react-scripts build && node scripts/check-no-mocks.mjs",
 ```
 
-- [ ] **Step 4: Replace the guard in `src/config/instance.js`**
+- [x] **Step 4: Replace the guard in `src/config/instance.js`**
 
 Whole file:
 
@@ -186,7 +186,7 @@ export const backendApi = axios.create({
 });
 ```
 
-- [ ] **Step 5: Install mock mode from the entry file**
+- [x] **Step 5: Install mock mode from the entry file**
 
 `src/index.jsx`, whole file:
 
@@ -219,11 +219,11 @@ if (process.env.NODE_ENV !== 'production' && process.env.REACT_APP_MOCK === 'tru
 reportWebVitals();
 ```
 
-- [ ] **Step 6: Delete the old guard test**
+- [x] **Step 6: Delete the old guard test**
 
 Run: `Remove-Item src/config/instance.test.js`
 
-- [ ] **Step 7: Run tests and the build (green)**
+- [x] **Step 7: Run tests and the build (green)**
 
 Run: `$env:CI='true'; npx react-scripts test --watchAll=false`
 Expected: 12 suites / 123 tests pass.
@@ -233,7 +233,7 @@ Expected: `Compiled successfully` and `check-no-mocks: OK (...)`. The flag is fo
 
 Ask the user to run `npm run dev:mock`, open the browser network tab, and reload. Expected: screens show demo data; no request goes to the backend URL.
 
-- [ ] **Step 8: Update the runbook**
+- [x] **Step 8: Update the runbook**
 
 In `docs/runbooks/frontend-mock-mode.md`:
 - Line 13 becomes: `- Allowed environment: local dev server only. \`npm run build\` always drops the mock code, and fails if any mock code is left in \`build/\` (\`scripts/check-no-mocks.mjs\`).`
@@ -249,7 +249,7 @@ To prove the guard holds with the flag forced on (folder: `frontend/`):
 Pass: `check-no-mocks: OK`. Fail: the build exits with an error and lists the files. Do not ship. Check the mock guard in `src/index.jsx`.
 ```
 
-- [ ] **Step 9: Hand off**
+- [x] **Step 9: Hand off**
 
 Suggested commit: `refactor(frontend): install mock mode from entry and check bundle for mock code`.
 

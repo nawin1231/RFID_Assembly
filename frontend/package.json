@@ -14,7 +14,7 @@
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
     "react-router-dom": "^7.11.0",
-    "react-scripts": "^5.0.1",
+    "react-scripts": "^0.0.0",
     "recharts": "^3.10.1",
     "sweetalert2": "^11.26.25",
     "web-vitals": "^2.1.4",
@@ -24,13 +24,8 @@
     "start": "react-scripts start",
     "dev:mock": "cross-env REACT_APP_MOCK=true react-scripts start",
     "build": "react-scripts build && node scripts/check-no-mocks.mjs",
-    "test": "react-scripts test",
+    "test": "vitest",
     "eject": "react-scripts eject"
-  },
-  "jest": {
-    "moduleNameMapper": {
-      "^axios$": "axios/dist/node/axios.cjs"
-    }
   },
   "eslintConfig": {
     "extends": [
@@ -52,7 +47,9 @@
   },
   "devDependencies": {
     "cross-env": "^7.0.3",
+    "jsdom": "^29.1.1",
     "tailwindcss": "^3.4.19",
-    "typescript": "^4.9.5"
+    "typescript": "^4.9.5",
+    "vitest": "^4.1.11"
   }
 }

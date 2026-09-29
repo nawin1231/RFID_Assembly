@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { vi } from 'vitest';
 import { createMockAdapter } from './adapter';
 
 const BASE = 'http://localhost:5001/api/assembly';
@@ -18,7 +19,7 @@ describe('createMockAdapter', () => {
     });
 
     test('passes path params, query params and the parsed JSON body', async () => {
-        const handler = jest.fn(() => ({ data: { result: 'OK' } }));
+        const handler = vi.fn(() => ({ data: { result: 'OK' } }));
         const api = makeApi([{ method: 'PUT', path: '/status/:id', handler }]);
         await api.put('/status/7', { label_status: 'X' }, { params: { date_from: '2026-09-29' } });
         expect(handler).toHaveBeenCalledWith({
@@ -29,7 +30,7 @@ describe('createMockAdapter', () => {
     });
 
     test('passes an empty query and body when none are sent', async () => {
-        const handler = jest.fn(() => ({ data: [] }));
+        const handler = vi.fn(() => ({ data: [] }));
         const api = makeApi([{ method: 'GET', path: '/mock-done', handler }]);
         await api.get('/mock-done');
         expect(handler).toHaveBeenCalledWith({ params: {}, query: {}, body: {} });
@@ -52,7 +53,7 @@ describe('createMockAdapter', () => {
     });
 
     test('returns 404 and warns for an unmocked endpoint', async () => {
-        const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+        const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
         const api = makeApi([]);
         await expect(api.get('/nope')).rejects.toMatchObject({ response: { status: 404 } });
         expect(warn).toHaveBeenCalledWith(expect.stringContaining('GET /nope'));
