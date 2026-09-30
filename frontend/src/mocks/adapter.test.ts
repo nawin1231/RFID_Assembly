@@ -1,10 +1,11 @@
 import axios from 'axios';
 import { vi } from 'vitest';
 import { createMockAdapter } from './adapter';
+import type { Route } from './types';
 
 const BASE = 'http://localhost:5001/api/assembly';
 
-const makeApi = (routes) => {
+const makeApi = (routes: Route[]) => {
     const api = axios.create({ baseURL: BASE, headers: { 'Content-Type': 'application/json' } });
     api.defaults.adapter = createMockAdapter(routes, 0);
     return api;
@@ -37,7 +38,7 @@ describe('createMockAdapter', () => {
     });
 
     test('supports async handlers', async () => {
-        const api = makeApi([{ method: 'GET', path: '/status', handler: async () => ({ data: 'late' }) }]);
+        const api = makeApi([{ method: 'GET', path: '/status', handler: () => Promise.resolve({ data: 'late' }) }]);
         expect((await api.get('/status')).data).toBe('late');
     });
 

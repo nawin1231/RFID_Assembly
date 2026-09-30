@@ -1,7 +1,8 @@
 import { normalizePath, matchRoute } from './router';
+import type { Route } from './types';
 
 const handler = () => ({ data: 'ok' });
-const routes = [
+const routes: Route[] = [
     { method: 'GET', path: '/status', handler },
     { method: 'GET', path: '/lot-by-tag/:tag_id', handler },
     { method: 'PUT', path: '/login/users/:id', handler },
@@ -35,8 +36,8 @@ describe('matchRoute', () => {
     });
 
     test('extracts named params', () => {
-        expect(matchRoute(routes, 'GET', '/lot-by-tag/E2801160').params).toEqual({ tag_id: 'E2801160' });
-        expect(matchRoute(routes, 'PUT', '/login/users/7').params).toEqual({ id: '7' });
+        expect(matchRoute(routes, 'GET', '/lot-by-tag/E2801160')?.params).toEqual({ tag_id: 'E2801160' });
+        expect(matchRoute(routes, 'PUT', '/login/users/7')?.params).toEqual({ id: '7' });
     });
 
     test('is method-sensitive', () => {
@@ -60,7 +61,7 @@ describe('matchRoute', () => {
     });
 
     test('url-decodes params', () => {
-        expect(matchRoute(routes, 'GET', '/lot-by-tag/A%2F1').params).toEqual({ tag_id: 'A/1' });
+        expect(matchRoute(routes, 'GET', '/lot-by-tag/A%2F1')?.params).toEqual({ tag_id: 'A/1' });
     });
 
     test('returns null instead of throwing on a malformed escape', () => {
