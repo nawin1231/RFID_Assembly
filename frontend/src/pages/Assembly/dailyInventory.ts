@@ -2,26 +2,22 @@ import type { DailyInventoryRow } from '../../types/api';
 
 export interface DailyInventoryGroup {
     part_no: string;
+    wos: string;
     mc_nos: string[];
-    wos: { wos: string; qty: number }[];
+    qty: number;
 }
 
-// One group per part: machines listed once, qty summed per WOS across machines.
-export const groupDailyInventoryByPart = (rows: DailyInventoryRow[]): DailyInventoryGroup[] => {
-    const byPart = new Map<string, { mcs: Set<string>; wos: Map<string, number> }>();
+// Keyed by part + WOS (not part only) so a second WOS for a part shows as its own row instead of being hidden.
+export const groupDailyInventory = (rows: DailyInventoryRow[]): DailyInventoryGroup[] => {
+    const groups = new Map<string, { part_no: string; wos: string; mcs: Set<string>; qty: number }>();
     for (const r of rows) {
-        const part = byPart.get(r.part_no) ?? { mcs: new Set<string>(), wos: new Map<string, number>() };
-        part.mcs.add(r.mc_no);
-        part.wos.set(r.wos, (part.wos.get(r.wos) ?? 0) + r.qty);
-        byPart.set(r.part_no, part);
+        const key = `${r.part_no}|${r.wos}`;
+        const g = groups.get(key) ?? { part_no: r.part_no, wos: r.wos, mcs: new Set<string>(), qty: 0 };
+        g.mcs.add(r.mc_no);
+        g.qty += r.qty;
+        groups.set(key, g);
     }
-    return [...byPart.entries()]
-        .sort(([a], [b]) => a.localeCompare(b))
-        .map(([part_no, { mcs, wos }]) => ({
-            part_no,
-            mc_nos: [...mcs].sort(),
-            wos: [...wos.entries()]
-                .sort(([a], [b]) => a.localeCompare(b))
-                .map(([w, qty]) => ({ wos: w, qty })),
-        }));
+    return [...groups.values()]
+        .sort((a, b) => a.part_no.localeCompare(b.part_no) || a.wos.localeCompare(b.wos))
+        .map(({ part_no, wos, mcs, qty }) => ({ part_no, wos, mc_nos: [...mcs].sort(), qty }));
 };

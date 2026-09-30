@@ -18,14 +18,14 @@ settings:
 docs: |-
   PROPOSED contract, not built in the backend yet (waiting for IT). Only the frontend mock serves it.
 
-  Daily inventory at gauging, one flat row per machine + WOS. The frontend groups rows by part_no,
-  lists the distinct mc_no per part, and sums qty per WOS when one WOS runs on several machines.
+  Daily inventory at gauging, one flat row per machine. A part has one WOS and can run on several
+  machines. The frontend groups rows by part_no + wos, lists the distinct mc_no, and sums qty.
 
   ### 200 With rows
   ```json
   [
     { "mc_no": "MC-01", "part_no": "6204ZZCM", "wos": "W000101", "qty": 999 },
-    { "mc_no": "MC-02", "part_no": "6204ZZCM", "wos": "W000102", "qty": 999 },
+    { "mc_no": "MC-02", "part_no": "6204ZZCM", "wos": "W000101", "qty": 500 },
     { "mc_no": "MC-03", "part_no": "6205DDUCM", "wos": "W000201", "qty": 640 }
   ]
   ```

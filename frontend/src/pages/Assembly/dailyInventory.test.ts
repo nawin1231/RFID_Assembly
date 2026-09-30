@@ -1,45 +1,44 @@
-import { groupDailyInventoryByPart } from './dailyInventory';
+import { groupDailyInventory } from './dailyInventory';
 import type { DailyInventoryRow } from '../../types/api';
 
 const row = (mc_no: string, part_no: string, wos: string, qty: number): DailyInventoryRow => ({ mc_no, part_no, wos, qty });
 
-describe('groupDailyInventoryByPart', () => {
+describe('groupDailyInventory', () => {
     it('returns an empty list for no rows', () => {
-        expect(groupDailyInventoryByPart([])).toEqual([]);
+        expect(groupDailyInventory([])).toEqual([]);
     });
 
-    it('sums qty for a WOS that runs on several machines', () => {
-        const groups = groupDailyInventoryByPart([
+    it('makes one row per part with its machines and summed qty', () => {
+        const groups = groupDailyInventory([
             row('MC-06', 'P1', 'W1', 1200),
             row('MC-07', 'P1', 'W1', 800),
         ]);
-        expect(groups).toEqual([{ part_no: 'P1', mc_nos: ['MC-06', 'MC-07'], wos: [{ wos: 'W1', qty: 2000 }] }]);
+        expect(groups).toEqual([{ part_no: 'P1', wos: 'W1', mc_nos: ['MC-06', 'MC-07'], qty: 2000 }]);
     });
 
     it('lists each machine once, sorted', () => {
-        const groups = groupDailyInventoryByPart([
-            row('MC-07', 'P1', 'W2', 1),
+        const groups = groupDailyInventory([
+            row('MC-07', 'P1', 'W1', 1),
             row('MC-06', 'P1', 'W1', 1),
             row('MC-07', 'P1', 'W1', 1),
         ]);
         expect(groups[0].mc_nos).toEqual(['MC-06', 'MC-07']);
     });
 
-    it('sorts parts and the WOS rows inside each part', () => {
-        const groups = groupDailyInventoryByPart([
+    it('sorts by part, then WOS', () => {
+        const groups = groupDailyInventory([
             row('MC-02', 'P2', 'W9', 1),
             row('MC-01', 'P1', 'W3', 1),
             row('MC-01', 'P1', 'W2', 1),
         ]);
-        expect(groups.map(g => g.part_no)).toEqual(['P1', 'P2']);
-        expect(groups[0].wos.map(w => w.wos)).toEqual(['W2', 'W3']);
+        expect(groups.map(g => [g.part_no, g.wos])).toEqual([['P1', 'W2'], ['P1', 'W3'], ['P2', 'W9']]);
     });
 
-    it('keeps the same WOS under different parts apart', () => {
-        const groups = groupDailyInventoryByPart([
+    it('keeps two WOS of one part as two rows instead of hiding one', () => {
+        const groups = groupDailyInventory([
             row('MC-01', 'P1', 'W1', 5),
-            row('MC-02', 'P2', 'W1', 7),
+            row('MC-02', 'P1', 'W2', 7),
         ]);
-        expect(groups.map(g => g.wos)).toEqual([[{ wos: 'W1', qty: 5 }], [{ wos: 'W1', qty: 7 }]]);
+        expect(groups.map(g => g.qty)).toEqual([5, 7]);
     });
 });
