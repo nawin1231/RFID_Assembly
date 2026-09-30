@@ -48,8 +48,9 @@ const TABS: { key: Tab; label: string }[] = [
 ];
 
 const CARDS: { key: keyof DashboardSummary; label: string; color: string; bg: string; border: string; icon: React.ReactNode }[] = [
-    { key: 'total_qty', label: 'TOTAL QTY', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <DashboardOutlined className="text-amber-400" /> },
-    { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-slate-600', bg: 'bg-white', border: 'border-gray-200', icon: <ScanOutlined className="text-slate-400" /> },
+    // Stage cards use the same colours as STATUS_BADGE; TOTAL is neutral because it is a sum, not a stage.
+    { key: 'total_qty', label: 'TOTAL QTY', color: 'text-slate-800', bg: 'bg-white', border: 'border-gray-200', icon: <DashboardOutlined className="text-slate-400" /> },
+    { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <ScanOutlined className="text-amber-400" /> },
     { key: 'gr_f1', label: 'GAUGING ROOM F1', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <ToolOutlined className="text-green-400" /> },
     { key: 'mc_f1', label: 'MC GAUGING F1', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <ToolOutlined className="text-blue-400" /> },
 ];
@@ -67,6 +68,16 @@ const TEXT_FIELDS: { name: keyof DashboardFilter; label: string; placeholder: st
 const today = () => new Date().toISOString().slice(0, 10);
 const defaultFilter: Required<DashboardFilter> = { date_from: today(), date_to: today(), brg_type: '', wos: '', lot_no: '', status_id: '', location_name: '' };
 const PAGE_SIZE = 20;
+
+const TH_CLS = 'px-4 py-2.5 text-xs font-semibold text-gray-500 border-b border-gray-200 whitespace-nowrap uppercase tracking-wider';
+
+// Fixed widths for short codes; M/C NO. takes the rest because its chips wrap.
+const DAILY_COLUMNS = [
+    { label: 'M/C NO.', cls: 'text-left' },
+    { label: 'PART NO.', cls: 'text-left w-40' },
+    { label: 'WOS', cls: 'text-left w-32' },
+    { label: 'QTY', cls: 'text-right w-28' },
+];
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState<Tab>('summary');
@@ -326,12 +337,10 @@ const Dashboard = () => {
                             </div>
                             <div className="overflow-auto flex-1">
                                 <table className="w-full border-collapse">
-                                    <thead className="sticky top-0 z-10">
-                                        <tr className="bg-emerald-700">
-                                            {['M/C NO.', 'PART NO.', 'WOS', 'QTY'].map((col, i) => (
-                                                <th key={col} className={`px-4 py-3 text-xs font-semibold text-white uppercase tracking-wider ${i === 3 ? 'text-right' : 'text-left'}`}>
-                                                    {col}
-                                                </th>
+                                    <thead className="bg-gray-50 sticky top-0 z-10">
+                                        <tr>
+                                            {DAILY_COLUMNS.map(col => (
+                                                <th key={col.label} className={`${TH_CLS} ${col.cls}`}>{col.label}</th>
                                             ))}
                                         </tr>
                                     </thead>
@@ -365,7 +374,7 @@ const Dashboard = () => {
                                                 <tr>
                                                     <td colSpan={2} />
                                                     <td className="px-4 pb-2.5 pt-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Subtotal</td>
-                                                    <td className="px-4 pb-2.5 pt-1 text-sm font-bold text-emerald-700 text-right tabular-nums">{p.qty.toLocaleString()}</td>
+                                                    <td className="px-4 pb-2.5 pt-1 text-sm font-bold text-slate-900 text-right tabular-nums">{p.qty.toLocaleString()}</td>
                                                 </tr>
                                             )}
                                         </tbody>
@@ -374,7 +383,7 @@ const Dashboard = () => {
                                         <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-200">
                                             <tr>
                                                 <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-600 uppercase tracking-wider">TOTAL :</td>
-                                                <td className="px-4 py-3 text-sm font-bold text-blue-600 text-right">{dailyTotalQty.toLocaleString()}</td>
+                                                <td className="px-4 py-3 text-base font-bold text-slate-900 text-right tabular-nums">{dailyTotalQty.toLocaleString()}</td>
                                             </tr>
                                         </tfoot>
                                     )}
@@ -397,10 +406,10 @@ const Dashboard = () => {
                             <div className="bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden flex-1 min-h-0">
                                 <div className="overflow-auto flex-1">
                                     <table className="w-full">
-                                        <thead className="sticky top-0">
-                                            <tr className="bg-emerald-700">
+                                        <thead className="bg-gray-50 sticky top-0">
+                                            <tr>
                                                 {['PROCESS_CODE', 'PROCESS_NAME', 'INVENTORY_QTY'].map((col, i) => (
-                                                    <th key={i} className={`px-4 py-3 text-xs font-semibold text-white uppercase tracking-wider ${i === 2 ? 'text-right' : 'text-left'}`}>
+                                                    <th key={i} className={`${TH_CLS} ${i === 2 ? 'text-right' : 'text-left'}`}>
                                                         {col}
                                                     </th>
                                                 ))}
@@ -424,7 +433,7 @@ const Dashboard = () => {
                                                     <td colSpan={2} className="px-4 py-4 text-sm font-bold text-gray-600 uppercase tracking-wider">
                                                         TOTAL INVENTORY :
                                                     </td>
-                                                    <td className="px-4 py-4 text-sm font-bold text-blue-600 text-right">
+                                                    <td className="px-4 py-4 text-base font-bold text-slate-900 text-right tabular-nums">
                                                         {processSummary.reduce((sum, p) => sum + (p.inventory_qty || 0), 0).toLocaleString()}
                                                     </td>
                                                 </tr>
@@ -537,7 +546,7 @@ const Dashboard = () => {
                                 <thead className="bg-gray-50 sticky top-0">
                                     <tr>
                                         {['No.', 'Lot No.', 'Part No.', 'Spec', 'WOS', 'Location', 'Process', 'QTY', 'Updated'].map((col, i) => (
-                                            <th key={i} className="text-left px-4 py-2.5 text-xs font-semibold text-gray-400 border-b border-gray-100 whitespace-nowrap uppercase tracking-wider">
+                                            <th key={i} className={`${TH_CLS} text-left`}>
                                                 {col}
                                             </th>
                                         ))}
