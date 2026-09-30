@@ -19,6 +19,14 @@ const result = <C extends string>(code: 'OK' | C): HandlerResult<{ result: 'OK' 
 const historyRow = ({ lot_no, tag_id, emp_id, remark, cleared_at, updated_at, brg_type, spec }: ClearedLot): ClearTagHistoryRow =>
     ({ lot_no, tag_id, emp_id, remark, cleared_at, updated_at, brg_type, spec });
 
+// Case-insensitive like the SQL Server default collation.
+const matchesSearch = (search: string | undefined) => {
+    const needle = search?.trim().toLowerCase();
+    if (!needle) return () => true;
+    return (l: ClearedLot) => [l.lot_no, l.tag_id, l.emp_id, l.brg_type]
+        .some((v) => v?.toLowerCase().includes(needle));
+};
+
 export const clearTagRoutes = (db: MockDb): Route[] => [
     {
         method: 'GET',
@@ -28,6 +36,7 @@ export const clearTagRoutes = (db: MockDb): Route[] => [
                 .filter((l): l is ClearedLot => l.status_id === COMPLETED && l.cleared_at !== null)
                 .filter((l) => !query.date_from || l.cleared_at.slice(0, 10) >= query.date_from)
                 .filter((l) => !query.date_to || l.cleared_at.slice(0, 10) <= query.date_to)
+                .filter(matchesSearch(query.search))
                 .sort(newestFirst('cleared_at'))
                 .slice(0, MAX_ROWS)
                 .map(historyRow);

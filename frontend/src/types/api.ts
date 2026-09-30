@@ -118,6 +118,8 @@ export interface ClearTagHistoryRow {
 export interface ClearTagHistoryQuery {
     date_from?: string;
     date_to?: string;
+    /** Matches lot_no, tag_id, emp_id or brg_type (contains). */
+    search?: string;
 }
 
 export interface MockDoneRow {

@@ -35,6 +35,9 @@ const DATE_FIELDS: { name: keyof ClearTagHistoryQuery; label: string }[] = [
     { name: 'date_to',   label: 'Date To' },
 ];
 
+const SEARCH_MIN_CHARS   = 3;
+const SEARCH_DEBOUNCE_MS = 3000;
+
 const ClearTag = () => {
     const [activeTab, setActiveTab] = useState<Tab>('clear');
 
@@ -54,6 +57,7 @@ const ClearTag = () => {
 
     const lotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
     const tagTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const searchTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isMatch = lotInfo && tagInfo && lotInfo.tag_id === tagInfo.tag_id;
 
@@ -160,6 +164,21 @@ const ClearTag = () => {
             setHistory(res.data);
         } catch (err) { console.error(err); }
         finally { setHistoryLoading(false); }
+    };
+
+    const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const next = { ...historyFilter, search: e.target.value };
+        setHistoryFilter(next);
+        if (searchTimer.current) clearTimeout(searchTimer.current);
+        // Empty input refetches so the full list comes back; 1-2 chars wait for more typing.
+        const length = e.target.value.trim().length;
+        if (length > 0 && length < SEARCH_MIN_CHARS) return;
+        searchTimer.current = setTimeout(() => { void fetchHistory(next); }, SEARCH_DEBOUNCE_MS);
+    };
+
+    const handleSearchClick = () => {
+        if (searchTimer.current) clearTimeout(searchTimer.current);
+        void fetchHistory(historyFilter);
     };
 
     const InfoBlock = ({ title, info, onClear }: InfoBlockProps) => (
@@ -363,7 +382,15 @@ const ClearTag = () => {
                                         className="h-9 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400" />
                                 </div>
                             ))}
-                            <button onClick={() => void fetchHistory(historyFilter)} disabled={historyLoading}
+                            <div className="flex flex-col gap-1">
+                                <p className="text-xs text-gray-400">Search</p>
+                                <input type="text"
+                                    value={historyFilter.search ?? ''}
+                                    onChange={handleSearchChange}
+                                    placeholder={`Lot / Tag / Emp / Part No. (min ${SEARCH_MIN_CHARS})`}
+                                    className="h-9 w-64 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                            </div>
+                            <button onClick={handleSearchClick} disabled={historyLoading}
                                 className="h-9 px-5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50">
                                 {historyLoading ? '...' : 'Search'}
                             </button>

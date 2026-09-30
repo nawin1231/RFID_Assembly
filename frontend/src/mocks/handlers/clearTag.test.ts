@@ -30,6 +30,28 @@ describe('GET /clear-tag/history', () => {
         const cleared = data.map((h) => h.cleared_at);
         expect(cleared).toEqual([...cleared].sort().reverse());
     });
+
+    test('search matches lot_no, tag_id, emp_id or brg_type, case-insensitive', async () => {
+        const target = db.lots.find((l) => l.status_id === 4)!;
+        for (const field of ['lot_no', 'tag_id', 'emp_id', 'brg_type'] as const) {
+            const needle = target[field]!.slice(1, 5).toLowerCase();
+            const { data } = await callRoute<ClearTagHistoryRow[]>(routes, 'GET', '/clear-tag/history', {
+                query: { search: needle },
+            });
+            expect(data.map((h) => h.lot_no)).toContain(target.lot_no);
+            data.forEach((h) => {
+                const haystack = [h.lot_no, h.tag_id, h.emp_id, h.brg_type].join('|').toLowerCase();
+                expect(haystack).toContain(needle);
+            });
+        }
+    });
+
+    test('search combines with the date range', async () => {
+        const { data } = await callRoute<ClearTagHistoryRow[]>(routes, 'GET', '/clear-tag/history', {
+            query: { date_from: '2000-01-01', date_to: '2000-01-01', search: 'DEMO' },
+        });
+        expect(data).toEqual([]);
+    });
 });
 
 describe('/mock-done', () => {
