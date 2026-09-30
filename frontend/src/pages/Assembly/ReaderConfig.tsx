@@ -1,15 +1,21 @@
 import { useState, useEffect } from 'react';
 import { backendApi } from '../../config/instance';
 import Swal from 'sweetalert2';
-import type { AdminResult, ReaderConfig as ReaderConfigRow, ReaderStatus, ReaderType, ReadersStatusResponse } from '../../types/api';
+import { isScannableStatus } from '../../config/scanConfig';
+import type { ScannableStatus } from '../../config/scanConfig';
+import type {
+    AdminResult, ReaderConfig as ReaderConfigRow, ReaderStatus, ReadersStatusResponse, Status,
+} from '../../types/api';
 
 const ReaderConfig = () => {
     const [readers, setReaders] = useState<ReaderConfigRow[]>([]);
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<ReaderStatus[]>([]);
+    const [typeOptions, setTypeOptions] = useState<ScannableStatus[]>([]);
 
     useEffect(() => {
         void fetchConfig();
+        void fetchTypeOptions();
         void fetchStatus();
         const interval = setInterval(() => void fetchStatus(), 5000);
         return () => clearInterval(interval);
@@ -20,6 +26,16 @@ const ReaderConfig = () => {
             setReaders(res.data);
         } catch {
             void Swal.fire({ icon: 'error', title: 'ไม่สามารถโหลดหน้านี้ได้', timer: 1500, showConfirmButton: false });
+        }
+    };
+
+    // A reader can only be set to a status that has a scan endpoint.
+    const fetchTypeOptions = async () => {
+        try {
+            const res = await backendApi.get<Status[]>('/status');
+            setTypeOptions(res.data.filter(isScannableStatus));
+        } catch (err) {
+            console.error('fetchTypeOptions failed', err);
         }
     };
 
@@ -52,8 +68,9 @@ const ReaderConfig = () => {
     };
 
     const handleAdd = () => {
+        if (typeOptions.length === 0) return;
         setReaders(prev => [...prev, {
-            type: 'gr_f1',
+            type: typeOptions[0].status,
             location_name: '',
             enabled: true,
             ip: '',
@@ -75,9 +92,8 @@ const ReaderConfig = () => {
         });
     };
 
-    const isConnected = (reader: ReaderConfigRow) => {
-        return status.find(s => s.type === reader.type)?.connected || false;
-    }
+    // The backend numbers readers by their position in the config, so match by index, not by type.
+    const isConnected = (index: number) => status.find(s => s.index === index)?.connected ?? false;
 
     return (
         <div className="flex flex-col gap-4 h-full">
@@ -94,7 +110,8 @@ const ReaderConfig = () => {
                     </button>
                     <button
                         onClick={handleAdd}
-                        className="h-9 px-4 text-sm rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50"
+                        disabled={typeOptions.length === 0}
+                        className="h-9 px-4 text-sm rounded-lg border border-blue-200 text-blue-500 hover:bg-blue-50 disabled:opacity-50"
                     >
                         + Add Reader
                     </button>
@@ -124,7 +141,7 @@ const ReaderConfig = () => {
                         <tbody>
                             {readers.length === 0 && (
                                 <tr>
-                                    <td colSpan={6} className="text-center py-12 text-gray-300 text-sm">
+                                    <td colSpan={7}className="text-center py-12 text-gray-300 text-sm">
                                         No readers configured
                                     </td>
                                 </tr>
@@ -135,11 +152,11 @@ const ReaderConfig = () => {
                                     {/* STATUS */}
                                     <td className="px-4 py-3">
                                         <span className={`inline-flex items-center gap-1.5 text-xs px-2.5 py-1 rounded-full font-medium
-                                            ${isConnected(r)
+                                            ${isConnected(i)
                                                 ? 'bg-green-50 text-green-600'
                                                 : 'bg-gray-100 text-gray-400'}`}>
-                                            <span className={`w-1.5 h-1.5 rounded-full ${isConnected(r) ? 'bg-green-500' : 'bg-gray-300'}`} />
-                                            {isConnected(r) ? 'Connected' : 'Offline'}
+                                            <span className={`w-1.5 h-1.5 rounded-full ${isConnected(i) ? 'bg-green-500' : 'bg-gray-300'}`} />
+                                            {isConnected(i) ? 'Connected' : 'Offline'}
                                         </span>
                                     </td>
 
@@ -147,11 +164,18 @@ const ReaderConfig = () => {
                                     <td className="px-4 py-3">
                                         <select
                                             value={r.type}
-                                            onChange={(e) => handleChange(i, 'type', e.target.value as ReaderType)}
+                                            onChange={(e) => {
+                                                const next = typeOptions.find(o => o.status === e.target.value);
+                                                if (next) handleChange(i, 'type', next.status);
+                                            }}
                                             className="h-9 px-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         >
-                                            <option value="gr_f1">Gauging Room F1</option>
-                                            <option value="mc_f1">MC Gauging F1</option>
+                                            {!typeOptions.some(o => o.status === r.type) && (
+                                                <option value={r.type}>{r.type}</option>
+                                            )}
+                                            {typeOptions.map(o => (
+                                                <option key={o.id} value={o.status}>{o.label_status}</option>
+                                            ))}
                                         </select>
                                     </td>
 

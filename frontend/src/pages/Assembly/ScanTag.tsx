@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { backendApi } from '../../config/instance';
+import { SCAN_CONFIG } from '../../config/scanConfig';
 import Swal from 'sweetalert2';
 import type { SweetAlertIcon } from 'sweetalert2';
 import type { ReaderType, ScanRequest, ScanResult } from '../../types/api';
@@ -12,11 +13,6 @@ const showAlert = (msg: string, type: SweetAlertIcon) => {
         showConfirmButton: false,
         timer: 1500,
     });
-};
-
-const SCAN_CONFIG: Record<ReaderType, { label: string; endpoint: string }> = {
-    'gr_f1':     { label: 'Gauging Room F1', endpoint: '/gauging-room-f1' },
-    'mc_f1': { label: 'MC Gauging F1', endpoint: '/mc-gauging-f1' },
 };
 
 interface ScanTagProps {
