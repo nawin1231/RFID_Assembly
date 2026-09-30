@@ -49,6 +49,34 @@ describe('createDb', () => {
         expect(db.as400Lots.some((a) => !registered.has(a.lot_no))).toBe(true);
     });
 
+    test('every WOS holds one part, in the lots and in the AS400 catalog', () => {
+        const db = createTestDb();
+        [db.lots, db.as400Lots].forEach((rows) => {
+            const partsByWos = new Map<string, Set<string>>();
+            rows.forEach((r) => partsByWos.set(r.wos, (partsByWos.get(r.wos) ?? new Set()).add(r.brg_type)));
+            expect(partsByWos.size).toBeGreaterThan(1);
+            partsByWos.forEach((parts) => expect(parts.size).toBe(1));
+        });
+    });
+
+    test('no timestamp is in the future, even shortly after midnight', () => {
+        [FIXED_NOW, new Date(2026, 8, 29, 0, 20)].forEach((clock) => {
+            const db = createDb({ now: () => clock });
+            const now = db.now();
+            db.lots.forEach((l) => {
+                expect(l.created_at <= now).toBe(true);
+                expect(l.updated_at <= now).toBe(true);
+                expect(l.created_at <= l.updated_at).toBe(true);
+            });
+        });
+    });
+
+    test('seeds several lots cleared today, from more than one process', () => {
+        const cleared = createTestDb().lots.filter((l) => l.cleared_at?.startsWith(TODAY));
+        expect(cleared.length).toBeGreaterThanOrEqual(4);
+        expect(new Set(cleared.map((l) => l.remark?.match(/^\[FROM: ([^\]]+)\]/)?.[1])).size).toBeGreaterThan(1);
+    });
+
     test('status and process ids are numbers', () => {
         const db = createTestDb();
         [...db.statuses, ...db.processes, ...db.users].forEach((row) => expect(typeof row.id).toBe('number'));

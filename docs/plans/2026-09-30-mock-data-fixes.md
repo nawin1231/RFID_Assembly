@@ -43,7 +43,7 @@ Branch: `ayt-rfid`. Found by running `npm run dev:mock` and checking each page i
 
 | # | Status | Task | Files (about) | Runs in |
 |---|---|---|---|---|
-| 1 | `[ ]` | **M1 + M2 + M4, lot fixtures.** One part per WOS. Today's timestamps stay in the past, ending at "now". More cleared rows today, with remarks from different processes. | `mocks/fixtures/lots.ts`, mock tests that assert totals | Main (Sonnet 5, medium) |
+| 1 | `[x]` | **M1 + M2 + M4, lot fixtures.** Done: one part per WOS (5 lots each), today's rows end at "now", 5 cleared today from 2 processes (`lots.ts:5-75`, 3 new tests in `db.test.ts`). One part per WOS. Today's timestamps stay in the past, ending at "now". More cleared rows today, with remarks from different processes. | `mocks/fixtures/lots.ts`, mock tests that assert totals | Main (Sonnet 5, medium) |
 | 2 | `[ ]` | **M3, Daily Inventory fixture.** Static list, but with the same part/WOS pairs as `lots`. | `mocks/fixtures/dailyInventory.ts`, `dailyInventory.test.ts` if affected | Main (Sonnet 5, medium) |
 | 3 | `[ ]` | **P1a, DB.** Add the `can_clear_tag` column. Change `Stored_tb_assy_completed` to the new rule. Up and down SQL, plus the dev seed. Show the SQL and wait for approval. Never run it. | `backend/backup_DB_SP/alter_process_can_clear_tag.sql`, `.down.sql`, `backend/scripts/setup_dev_database.sql` | Main (Opus 5.5, high) |
 | 4 | `[ ]` | **P1b, backend.** Process select, insert and update read and write `can_clear_tag`. Add unit tests and update the Bruno Process requests. | `backend/services/masterService.js`, `backend/test/unit/masterService.test.js`, `bruno/AYT-RFID/Process - {List,Create,Update}.yml` | Main (Sonnet 5, medium) |
