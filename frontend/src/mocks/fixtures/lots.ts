@@ -1,4 +1,6 @@
 import { daysAgo } from '../time';
+import type { As400Lot } from '../../types/api';
+import type { LotRow } from '../types';
 
 const PARTS = [
     { brg_type: '6204ZZCM', spec: 'NS7S' },
@@ -12,9 +14,9 @@ const UNREGISTERED = 8;
 
 // Repeating cycle so every dashboard card, and the Clear Tag history, has rows.
 const STATUS_CYCLE = [1, 1, 2, 2, 3, 3, 4];
-const LOCATION_BY_STATUS = { 1: null, 2: 'GAUGING ROOM F1', 3: 'MC GAUGING F1', 4: 'MC GAUGING F1' };
+const LOCATION_BY_STATUS: Record<number, string | null> = { 1: null, 2: 'GAUGING ROOM F1', 3: 'MC GAUGING F1', 4: 'MC GAUGING F1' };
 
-const catalogLot = (n) => {
+const catalogLot = (n: number): As400Lot => {
     const part = PARTS[n % PARTS.length];
     return {
         lot_no: `DEMO${String(n).padStart(6, '0')}`,
@@ -25,10 +27,10 @@ const catalogLot = (n) => {
     };
 };
 
-export const buildAs400Lots = () =>
+export const buildAs400Lots = (): As400Lot[] =>
     Array.from({ length: REGISTERED + UNREGISTERED }, (_, i) => catalogLot(i + 1));
 
-export const buildLots = (today) =>
+export const buildLots = (today: Date): LotRow[] =>
     Array.from({ length: REGISTERED }, (_, i) => {
         const statusId = STATUS_CYCLE[i % STATUS_CYCLE.length];
         const day = i % 3;

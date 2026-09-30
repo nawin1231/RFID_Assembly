@@ -35,7 +35,7 @@ describe('createDb', () => {
 
     test('seeds lots cleared today, for the Clear Tag history default filter', () => {
         const cleared = createTestDb().lots.filter((l) => l.status_id === 4);
-        expect(cleared.some((l) => l.cleared_at.startsWith(TODAY))).toBe(true);
+        expect(cleared.some((l) => l.cleared_at?.startsWith(TODAY))).toBe(true);
     });
 
     test('seeds more than one page (20 rows) of active lots', () => {
