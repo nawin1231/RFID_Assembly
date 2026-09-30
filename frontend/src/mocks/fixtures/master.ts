@@ -1,9 +1,12 @@
-export const buildProcesses = () => [
+import type { Process } from '../../types/api';
+import type { StatusRow } from '../types';
+
+export const buildProcesses = (): Process[] => [
     { id: 1, process_code: '1400', process_name: 'BEFORE ISSUE' },
     { id: 2, process_code: '1500', process_name: 'GAUGING' },
 ];
 
-export const buildStatuses = () => [
+export const buildStatuses = (): StatusRow[] => [
     { id: 1, status: 'bf_issue', label_status: 'Before Issue', process_id: 1 },
     { id: 2, status: 'gr_f1', label_status: 'Gauging Room F1', process_id: 2 },
     { id: 3, status: 'mc_f1', label_status: 'MC Gauging F1', process_id: 2 },
