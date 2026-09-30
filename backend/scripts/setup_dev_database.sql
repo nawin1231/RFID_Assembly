@@ -23,6 +23,7 @@ CREATE TABLE [dbo].[tb_master_process](
 	[id] [int] IDENTITY(1,1) NOT NULL,
 	[process_code] [varchar](10) NOT NULL,
 	[process_name] [varchar](50) NOT NULL,
+	[can_clear_tag] [bit] NOT NULL CONSTRAINT [DF_tb_master_process_can_clear_tag] DEFAULT 0,
 PRIMARY KEY CLUSTERED ([id] ASC)
 ) ON [PRIMARY]
 GO
@@ -267,14 +268,18 @@ AS BEGIN
     IF NOT EXISTS (SELECT 1 FROM tb_master_assy_status WHERE id = 4)
     BEGIN SELECT 'INVALID_STATUS' AS result RETURN END
 
-    DECLARE @tag_id VARCHAR(50)
-    SELECT @tag_id = tag_id FROM tb_assy_lot WHERE lot_no = @lot_no
+    DECLARE @tag_id VARCHAR(50), @status_id INT
+    SELECT @tag_id = tag_id, @status_id = status_id FROM tb_assy_lot WHERE lot_no = @lot_no
 
     IF @tag_id IS NULL
     BEGIN SELECT 'LOT_NOT_FOUND' AS result RETURN END
 
-	IF (SELECT status_id FROM tb_assy_lot WHERE lot_no = @lot_no) != 3
-	BEGIN SELECT 'INVALID_PROCESS' AS result RETURN END
+    -- Status 4 can belong to a clearable process too; excluding it stops a lot being cleared twice
+    IF @status_id = 4 OR NOT EXISTS (
+        SELECT 1 FROM tb_master_assy_status s
+        JOIN tb_master_process p ON p.id = s.process_id
+        WHERE s.id = @status_id AND p.can_clear_tag = 1)
+    BEGIN SELECT 'INVALID_PROCESS' AS result RETURN END
 
     UPDATE tb_assy_lot SET
         status_id  = 4,
@@ -759,28 +764,30 @@ END
 GO
 
 -- =====================================================================
--- 3. Seed master tables — PLACEHOLDER VALUES.
+-- 3. Seed master tables. Status labels are PLACEHOLDER VALUES.
 --    Run this against your PROD db_rfid_assembly first to get the real
---    rows, then replace the INSERTs below before running against dev:
+--    labels, then replace them below before running against dev:
 --
---        SELECT id, process_code, process_name FROM tb_master_process ORDER BY id;
 --        SELECT id, status, label_status, process_id FROM tb_master_assy_status ORDER BY id;
 --
 --    The status IDs (1-4) themselves must stay exactly as-is — processService
 --    (Phase 5) and the frozen Python client hard-code this order:
 --    1=bf_issue, 2=gr_f1, 3=mc_f1, 4=completed.
+--
+--    can_clear_tag stays 0 on every process: Clear Tag rejects all lots
+--    until you set it in Management > Process.
 -- =====================================================================
 
 SET IDENTITY_INSERT tb_master_process ON;
 INSERT INTO tb_master_process (id, process_code, process_name) VALUES
-    (1, 'REPLACE_ME', 'REPLACE_ME'),
-    (2, 'REPLACE_ME', 'REPLACE_ME');
+    (1, '1400', 'BEFORE ISSUE'),
+    (2, '1500', 'GAUGING');
 SET IDENTITY_INSERT tb_master_process OFF;
 
 SET IDENTITY_INSERT tb_master_assy_status ON;
 INSERT INTO tb_master_assy_status (id, status, label_status, process_id) VALUES
     (1, 'bf_issue',  'REPLACE_ME', 1),
-    (2, 'gr_f1',     'REPLACE_ME', 1),
+    (2, 'gr_f1',     'REPLACE_ME', 2),
     (3, 'mc_f1',     'REPLACE_ME', 2),
     (4, 'completed', 'REPLACE_ME', 2);
 SET IDENTITY_INSERT tb_master_assy_status OFF;
