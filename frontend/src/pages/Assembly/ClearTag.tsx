@@ -1,56 +1,78 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { backendApi } from '../../config/instance';
 import Swal from 'sweetalert2';
+import type { SweetAlertIcon } from 'sweetalert2';
+import type {
+    ActiveLot,
+    ClearTagHistoryQuery,
+    ClearTagHistoryRow,
+    CompletedRequest,
+    CompletedResult,
+    Status,
+} from '../../types/api';
 
-const showAlert = (msg, type) => {
-    Swal.fire({ position: 'center', icon: type, title: msg, showConfirmButton: false, timer: 1500 });
+type Tab = 'clear' | 'history';
+
+interface InfoBlockProps {
+    title: string;
+    info: ActiveLot | null;
+    onClear: () => void;
+}
+
+const showAlert = (msg: string, type: SweetAlertIcon) => {
+    void Swal.fire({ position: 'center', icon: type, title: msg, showConfirmButton: false, timer: 1500 });
 };
 
 const today = () => new Date().toISOString().slice(0, 10);
 
-const TABS = [
+const TABS: { key: Tab; label: string }[] = [
     { key: 'clear',   label: 'Clear Tag' },
     { key: 'history', label: 'History' },
 ];
 
+const DATE_FIELDS: { name: keyof ClearTagHistoryQuery; label: string }[] = [
+    { name: 'date_from', label: 'Date From' },
+    { name: 'date_to',   label: 'Date To' },
+];
+
 const ClearTag = () => {
-    const [activeTab, setActiveTab] = useState('clear');
+    const [activeTab, setActiveTab] = useState<Tab>('clear');
 
     const [lotInput, setLotInput] = useState('');
     const [tagInput, setTagInput] = useState('');
-    const [lotInfo, setLotInfo]   = useState(null);
-    const [tagInfo, setTagInfo]   = useState(null);
+    const [lotInfo, setLotInfo]   = useState<ActiveLot | null>(null);
+    const [tagInfo, setTagInfo]   = useState<ActiveLot | null>(null);
     const [statusId, setStatusId] = useState('');
-    const [statuses, setStatuses] = useState([]);
+    const [statuses, setStatuses] = useState<Status[]>([]);
     const [remark, setRemark]     = useState('');
     const [empId, setEmpId]       = useState('');
     const [loading, setLoading]   = useState(false);
 
-    const [history, setHistory]               = useState([]);
-    const [historyFilter, setHistoryFilter]   = useState({ date_from: today(), date_to: today() });
+    const [history, setHistory]               = useState<ClearTagHistoryRow[]>([]);
+    const [historyFilter, setHistoryFilter]   = useState<ClearTagHistoryQuery>({ date_from: today(), date_to: today() });
     const [historyLoading, setHistoryLoading] = useState(false);
 
-    const lotTimer = useRef(null);
-    const tagTimer = useRef(null);
+    const lotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const tagTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isMatch = lotInfo && tagInfo && lotInfo.tag_id === tagInfo.tag_id;
 
-    useEffect(() => { fetchStatuses(); }, []);
+    useEffect(() => { void fetchStatuses(); }, []);
     useEffect(() => {
-        if (activeTab === 'history') fetchHistory();
+        if (activeTab === 'history') void fetchHistory();
     }, [activeTab]);
 
     const fetchStatuses = async () => {
         try {
-            const res = await backendApi.get('/status');
+            const res = await backendApi.get<Status[]>('/status');
             setStatuses(res.data.filter(s => s.id !== 4));
         } catch (err) { console.error(err); }
     };
 
-    const fetchLot = async (val) => {
+    const fetchLot = async (val: string) => {
         setLoading(true);
         try {
-            const res = await backendApi.get(`/lot-by-lot/${val}`);
+            const res = await backendApi.get<ActiveLot>(`/lot-by-lot/${val}`);
             setLotInfo(res.data);
             setLotInput('');
         } catch {
@@ -59,10 +81,10 @@ const ClearTag = () => {
         } finally { setLoading(false); }
     };
 
-    const fetchTag = async (val) => {
+    const fetchTag = async (val: string) => {
         setLoading(true);
         try {
-            const res = await backendApi.get(`/lot-by-tag/${val}`);
+            const res = await backendApi.get<ActiveLot>(`/lot-by-tag/${val}`);
             setTagInfo(res.data);
             setTagInput('');
         } catch {
@@ -71,18 +93,18 @@ const ClearTag = () => {
         } finally { setLoading(false); }
     };
 
-    const handleLotChange = (e) => {
+    const handleLotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.toUpperCase();
         setLotInput(val);
-        clearTimeout(lotTimer.current);
-        lotTimer.current = setTimeout(() => { if (val.trim()) fetchLot(val.trim()); }, 300);
+        if (lotTimer.current) clearTimeout(lotTimer.current);
+        lotTimer.current = setTimeout(() => { if (val.trim()) void fetchLot(val.trim()); }, 300);
     };
 
-    const handleTagChange = (e) => {
+    const handleTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.toUpperCase();
         setTagInput(val);
-        clearTimeout(tagTimer.current);
-        tagTimer.current = setTimeout(() => { if (val.trim()) fetchTag(val.trim()); }, 300);
+        if (tagTimer.current) clearTimeout(tagTimer.current);
+        tagTimer.current = setTimeout(() => { if (val.trim()) void fetchTag(val.trim()); }, 300);
     };
 
     const handleClear = async () => {
@@ -92,7 +114,8 @@ const ClearTag = () => {
         if (!statusId)     return showAlert('กรุณาเลือก Process', 'warning');
         if (!empId.trim()) return showAlert('กรุณากรอกรหัสพนักงาน', 'warning');
 
-        const processName = statuses.find(s => s.id == statusId)?.label_status || '';
+        // statusId stays a string (it comes from <select>), so compare as string
+        const processName = statuses.find(s => String(s.id) === statusId)?.label_status || '';
         const confirm = await Swal.fire({
             title: `Clear tag ของ ${lotInfo.lot_no}?`,
             html: `Process: <b>${processName}</b><br/>Emp: <b>${empId}</b>`,
@@ -107,11 +130,11 @@ const ClearTag = () => {
         setLoading(true);
         try {
             const fullRemark = `[FROM: ${processName}]${remark.trim() ? ' ' + remark.trim() : ''}`;
-            const res = await backendApi.post('/completed', {
+            const res = await backendApi.post<CompletedResult>('/completed', {
                 lot_no: lotInfo.lot_no,
                 remark: fullRemark,
                 emp_id: empId.trim(),
-            });
+            } satisfies CompletedRequest);
             if (res.data.result === 'OK') {
                 showAlert('Clear tag สำเร็จ', 'success');
                 handleReset();
@@ -129,17 +152,17 @@ const ClearTag = () => {
         setStatusId(''); setRemark(''); setEmpId('');
     };
 
-    const fetchHistory = async (f = historyFilter) => {
+    const fetchHistory = async (f: ClearTagHistoryQuery = historyFilter) => {
         setHistoryLoading(true);
         try {
             const params = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== ''));
-            const res = await backendApi.get('/clear-tag/history', { params });
+            const res = await backendApi.get<ClearTagHistoryRow[]>('/clear-tag/history', { params });
             setHistory(res.data);
         } catch (err) { console.error(err); }
         finally { setHistoryLoading(false); }
     };
 
-    const InfoBlock = ({ title, info, onClear }) => (
+    const InfoBlock = ({ title, info, onClear }: InfoBlockProps) => (
         <div className="flex-1 bg-white border border-gray-100 rounded-xl p-4 flex flex-col gap-0">
             <div className="flex items-center justify-between mb-3">
                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{title}</p>
@@ -293,7 +316,7 @@ const ClearTag = () => {
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Remark</p>
-                                <textarea type="textarea" value={remark}
+                                <textarea value={remark}
                                     onChange={e => setRemark(e.target.value)}
                                     placeholder="ระบุหมายเหตุ (ถ้ามี)"
                                     className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-emerald-400" />
@@ -331,10 +354,7 @@ const ClearTag = () => {
                 <div className="flex flex-col gap-3 flex-1 min-h-0">
                     <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shrink-0">
                         <div className="flex items-end gap-2">
-                            {[
-                                { name: 'date_from', label: 'Date From' },
-                                { name: 'date_to',   label: 'Date To' },
-                            ].map(({ name, label }) => (
+                            {DATE_FIELDS.map(({ name, label }) => (
                                 <div key={name} className="flex flex-col gap-1">
                                     <p className="text-xs text-gray-400">{label}</p>
                                     <input type="date" name={name}
@@ -343,7 +363,7 @@ const ClearTag = () => {
                                         className="h-9 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400" />
                                 </div>
                             ))}
-                            <button onClick={() => fetchHistory(historyFilter)} disabled={historyLoading}
+                            <button onClick={() => void fetchHistory(historyFilter)} disabled={historyLoading}
                                 className="h-9 px-5 text-sm bg-blue-500 hover:bg-blue-600 text-white rounded-lg disabled:opacity-50">
                                 {historyLoading ? '...' : 'Search'}
                             </button>

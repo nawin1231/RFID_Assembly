@@ -1,27 +1,28 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { backendApi } from '../../../config/instance';
 import Swal from 'sweetalert2';
+import type { AdminResult, Position, User, UserCreateRequest } from '../../../types/api';
 
-const POSITIONS = ['admin', 'user'];
-const defaultForm = { emp_id: '', eng_name: '', eng_surname: '', password: '', position: 'user' };
+const POSITIONS: Position[] = ['admin', 'user'];
+const defaultForm: UserCreateRequest = { emp_id: '', eng_name: '', eng_surname: '', password: '', position: 'user' };
 
 const UserTab = () => {
-    const [users, setUsers] = useState([]);
+    const [users, setUsers] = useState<User[]>([]);
     const [form, setForm] = useState(defaultForm);
-    const [editId, setEditId] = useState(null);
+    const [editId, setEditId] = useState<number | null>(null);
 
     const fetchUsers = async () => {
         try {
-            const res = await backendApi.get('/login/users');
+            const res = await backendApi.get<User[]>('/login/users');
             setUsers(res.data);
         } catch {
-            Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
+            void Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
         }
     };
 
-    useEffect(() => { fetchUsers(); }, []);
+    useEffect(() => { void fetchUsers(); }, []);
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async () => {
         if (!form.emp_id || !form.eng_name || !form.eng_surname || !form.password) {
@@ -29,39 +30,47 @@ const UserTab = () => {
         }
         try {
             if (editId) {
-                await backendApi.put(`/login/users/${editId}`, form);
+                await backendApi.put<AdminResult>(`/login/users/${editId}`, form);
             } else {
-                await backendApi.post('/login/users', form);
+                await backendApi.post<AdminResult>('/login/users', form);
             }
             setForm(defaultForm);
             setEditId(null);
-            fetchUsers();
-            Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
+            void fetchUsers();
+            void Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
         } catch {
-            Swal.fire('Error', 'บันทึกไม่ได้', 'error');
+            void Swal.fire('Error', 'บันทึกไม่ได้', 'error');
         }
     };
 
-    const handleEdit = (u) => {
+    const handleEdit = (u: User) => {
         setEditId(u.id);
-        setForm({ emp_id: u.emp_id, eng_name: u.eng_name, eng_surname: u.eng_surname, password: u.password, position: u.position });
+        // TODO(ts-bug-3): the list has no password, so this was `undefined`. '' shows the same empty field.
+        setForm({ emp_id: u.emp_id, eng_name: u.eng_name, eng_surname: u.eng_surname, password: '', position: u.position });
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         const confirm = await Swal.fire({
             title: 'ลบ user นี้?', icon: 'warning',
             showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก'
         });
         if (!confirm.isConfirmed) return;
         try {
-            await backendApi.delete(`/login/users/${id}`);
-            fetchUsers();
+            await backendApi.delete<AdminResult>(`/login/users/${id}`);
+            void fetchUsers();
         } catch {
-            Swal.fire('Error', 'ลบไม่ได้', 'error');
+            void Swal.fire('Error', 'ลบไม่ได้', 'error');
         }
     };
 
     const handleCancel = () => { setForm(defaultForm); setEditId(null); };
+
+    const fields: { name: Exclude<keyof UserCreateRequest, 'position'>; placeholder: string; disabled?: boolean; type?: string }[] = [
+        { name: 'emp_id', placeholder: 'Employee ID', disabled: !!editId },
+        { name: 'eng_name', placeholder: 'First Name' },
+        { name: 'eng_surname', placeholder: 'Last Name' },
+        { name: 'password', placeholder: 'Password', type: 'password' },
+    ];
 
     return (
         <div className="flex gap-4 h-full">
@@ -72,12 +81,7 @@ const UserTab = () => {
                     <p className="text-xs text-gray-400 uppercase tracking-wider">
                         {editId ? 'Edit User' : 'Add User'}
                     </p>
-                    {[
-                        { name: 'emp_id', placeholder: 'Employee ID', disabled: !!editId },
-                        { name: 'eng_name', placeholder: 'First Name' },
-                        { name: 'eng_surname', placeholder: 'Last Name' },
-                        { name: 'password', placeholder: 'Password', type: 'password' },
-                    ].map(({ name, placeholder, disabled, type }) => (
+                    {fields.map(({ name, placeholder, disabled, type }) => (
                         <input
                             key={name}
                             name={name}

@@ -1,12 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import UserTab from './Management/UserTab';
 import StatusTab from './Management/StatusTab';
 import ProcessTab from './Management/ProcessTab';
 import ReaderConfig from './ReaderConfig';
 import LoginModal from '../../components/LoginModal';
 import { useNavigate } from 'react-router-dom';
+import { readSessionUser } from '../../config/session';
 
-const TABS = [
+type TabKey = 'user' | 'status' | 'process' | 'reader';
+
+const TABS: { key: TabKey; label: string }[] = [
     { key: 'user', label: 'Users' },
     { key: 'status', label: 'Status' },
     { key: 'process', label: 'Process' },
@@ -15,13 +18,10 @@ const TABS = [
 
 const Management = () => {
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState('user');
+    const [activeTab, setActiveTab] = useState<TabKey>('user');
 
     // อ่านตรงจาก sessionStorage ทุกครั้งที่ render
-    const storedUser = (() => {
-        try { return JSON.parse(sessionStorage.getItem('assy_user')); }
-        catch { return null; }
-    })();
+    const storedUser = readSessionUser();
 
     // const [user, setUser] = useState(storedUser);
     // const handleLoginSuccess = (u) => {
