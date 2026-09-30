@@ -17,12 +17,13 @@ settings:
 
 docs: |-
   List processes, ordered by process_code.
+  `can_clear_tag` is true when lots in this process can be cleared on the Clear Tag page.
 
   ### 200 With rows
   ```json
   [
-    { "id": 1, "process_code": "1400", "process_name": "BEFORE ISSUE" },
-    { "id": 2, "process_code": "1500", "process_name": "GAUGING" }
+    { "id": 1, "process_code": "1400", "process_name": "BEFORE ISSUE", "can_clear_tag": false },
+    { "id": 2, "process_code": "1500", "process_name": "GAUGING", "can_clear_tag": true }
   ]
   ```
 

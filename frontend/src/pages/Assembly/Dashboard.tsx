@@ -368,7 +368,7 @@ const Dashboard = () => {
                                         <tbody key={p.part_no} className={`border-b-2 border-gray-200 ${pi % 2 === 1 ? 'bg-gray-50/70' : 'bg-white'}`}>
                                             {p.lines.map((l, li) => (
                                                 <tr key={l.wos} className={li > 0 ? 'border-t border-dashed border-gray-200' : ''}>
-                                                    <td className="px-4 py-2.5">
+                                                    <td className="px-4 py-2.5 border-r border-gray-200">
                                                         <div className="flex flex-wrap gap-1">
                                                             {l.mc_nos.map(mc => (
                                                                 <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
@@ -377,20 +377,13 @@ const Dashboard = () => {
                                                             ))}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap align-top">
+                                                    <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap align-top border-r border-gray-200">
                                                         {li === 0 ? p.part_no : ''}
                                                     </td>
                                                     <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap">{l.wos}</td>
                                                     <td className="px-4 py-2.5 text-sm font-bold text-gray-800 text-right tabular-nums">{l.qty.toLocaleString()}</td>
                                                 </tr>
                                             ))}
-                                            {p.lines.length > 1 && (
-                                                <tr>
-                                                    <td colSpan={2} />
-                                                    <td className="px-4 pb-2.5 pt-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Subtotal</td>
-                                                    <td className="px-4 pb-2.5 pt-1 text-sm font-bold text-slate-900 text-right tabular-nums">{p.qty.toLocaleString()}</td>
-                                                </tr>
-                                            )}
                                         </tbody>
                                     ))}
                                     {dailyParts.length > 0 && (

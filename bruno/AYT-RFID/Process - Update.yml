@@ -11,7 +11,8 @@ http:
     data: |-
       {
         "process_code": "9999",
-        "process_name": "Test Process Updated"
+        "process_name": "Test Process Updated",
+        "can_clear_tag": true
       }
   auth: inherit
 
@@ -24,6 +25,7 @@ settings:
 
 docs: |-
   Update a process by id. Updating an id that does not exist still returns OK.
+  `can_clear_tag` (boolean) says if lots in this process can be cleared on the Clear Tag page.
   A database error comes back as HTTP 200 with the message in `result`.
 
   ### 200 Updated
