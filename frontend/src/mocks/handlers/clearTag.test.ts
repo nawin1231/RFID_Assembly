@@ -1,8 +1,10 @@
 import { clearTagRoutes } from './clearTag';
 import { createTestDb, callRoute } from '../testUtils';
+import type { MockDb, Route } from '../types';
+import type { ClearTagHistoryRow, MockDoneRow } from '../../types/api';
 
-let db;
-let routes;
+let db: MockDb;
+let routes: Route[];
 beforeEach(() => {
     db = createTestDb();
     routes = clearTagRoutes(db);
@@ -10,7 +12,7 @@ beforeEach(() => {
 
 describe('GET /clear-tag/history', () => {
     test('the default "today" filter returns lots cleared today', async () => {
-        const { data } = await callRoute(routes, 'GET', '/clear-tag/history', {
+        const { data } = await callRoute<ClearTagHistoryRow[]>(routes, 'GET', '/clear-tag/history', {
             query: { date_from: '2026-09-29', date_to: '2026-09-29' },
         });
         expect(data.length).toBeGreaterThan(0);
@@ -23,7 +25,7 @@ describe('GET /clear-tag/history', () => {
     });
 
     test('without dates returns every cleared lot, newest first', async () => {
-        const { data } = await callRoute(routes, 'GET', '/clear-tag/history');
+        const { data } = await callRoute<ClearTagHistoryRow[]>(routes, 'GET', '/clear-tag/history');
         expect(data.length).toBe(db.lots.filter((l) => l.status_id === 4).length);
         const cleared = data.map((h) => h.cleared_at);
         expect(cleared).toEqual([...cleared].sort().reverse());
@@ -32,7 +34,7 @@ describe('GET /clear-tag/history', () => {
 
 describe('/mock-done', () => {
     test('lists newest first', async () => {
-        const { data } = await callRoute(routes, 'GET', '/mock-done');
+        const { data } = await callRoute<MockDoneRow[]>(routes, 'GET', '/mock-done');
         const created = data.map((m) => m.created_at);
         expect(created).toEqual([...created].sort().reverse());
     });

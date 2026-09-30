@@ -36,7 +36,8 @@ export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE';
 
 export type Query = Partial<Record<string, string>>;
 
-export interface HandlerInput<Body = never, Q extends Query = Query> {
+// `Q` is unconstrained: query interfaces (e.g. DashboardFilter) have no index signature.
+export interface HandlerInput<Body = never, Q = Query> {
     params: Record<string, string>;
     query: Q;
     body: Body;

@@ -1,8 +1,9 @@
 import { createRoutes } from './index';
 import { matchRoute } from '../router';
 import { createTestDb } from '../testUtils';
+import type { Method } from '../types';
 
-const CALLED_BY_APP = [
+const CALLED_BY_APP: [Method, string][] = [
     ['POST', '/login'],
     ['GET', '/login/users'], ['POST', '/login/users'], ['PUT', '/login/users/1'], ['DELETE', '/login/users/1'],
     ['GET', '/status'], ['POST', '/status'], ['PUT', '/status/1'], ['DELETE', '/status/1'],

@@ -1,18 +1,21 @@
 import { adminRoutes } from './admin';
 import { createTestDb, callRoute } from '../testUtils';
+import type { Method, MockDb, Route } from '../types';
+import type { AdminResult, Process, ReaderConfig, Status } from '../../types/api';
 
-let db;
-let routes;
+let db: MockDb;
+let routes: Route[];
 beforeEach(() => {
     db = createTestDb();
     routes = adminRoutes(db);
 });
 
-const call = (method, path, body) => callRoute(routes, method, path, { body });
+const call = <T = AdminResult>(method: Method, path: string, body?: unknown) =>
+    callRoute<T>(routes, method, path, { body });
 
 describe('/status', () => {
     test('lists statuses joined with their process, with numeric ids', async () => {
-        const { data } = await call('GET', '/status');
+        const { data } = await call<Status[]>('GET', '/status');
         expect(data.find((s) => s.id === 1)).toMatchObject({ status: 'bf_issue', process_code: '1400' });
         data.forEach((s) => expect(typeof s.id).toBe('number'));
     });
@@ -43,7 +46,7 @@ describe('/status', () => {
 describe('/process', () => {
     test('lists processes ordered by code', async () => {
         await call('POST', '/process', { process_code: '0100', process_name: 'FIRST' });
-        const { data } = await call('GET', '/process');
+        const { data } = await call<Process[]>('GET', '/process');
         expect(data.map((p) => p.process_code)).toEqual(['0100', '1400', '1500']);
     });
 
@@ -61,9 +64,9 @@ describe('/process', () => {
 
 describe('readers', () => {
     test('saving the config changes what is read back', async () => {
-        const config = [{ type: 'gr_f1', location_name: 'NEW ROOM', enabled: true, ip: '192.0.2.99', power: 20 }];
+        const config: ReaderConfig[] = [{ type: 'gr_f1', location_name: 'NEW ROOM', enabled: true, ip: '192.0.2.99', power: 20 }];
         expect((await call('PUT', '/readers-config', config)).data).toEqual({ result: 'OK' });
-        expect((await call('GET', '/readers-config')).data).toEqual(config);
+        expect((await call<ReaderConfig[]>('GET', '/readers-config')).data).toEqual(config);
     });
 
     test('status reports each reader with index and ip, enabled ones as connected', async () => {
