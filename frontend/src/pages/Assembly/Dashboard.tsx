@@ -46,12 +46,13 @@ const TABS: { key: Tab; label: string }[] = [
     { key: 'detail', label: 'Detail' },
 ];
 
-const CARDS: { key: keyof DashboardSummary; label: string; color: string; bg: string; border: string; icon: React.ReactNode }[] = [
+const CARDS: { key: keyof DashboardSummary; label: string; color: string; bg: string; border: string; bar?: string; icon: React.ReactNode }[] = [
     // Stage cards use the same colours as STATUS_BADGE; TOTAL is neutral because it is a sum, not a stage.
+    // Only stage cards have a `bar`: it shows their share of TOTAL.
     { key: 'total_qty', label: 'TOTAL QTY', color: 'text-slate-800', bg: 'bg-white', border: 'border-gray-200', icon: <DashboardOutlined className="text-slate-400" /> },
-    { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <ScanOutlined className="text-amber-400" /> },
-    { key: 'gr_f1', label: 'GAUGING ROOM F1', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <ToolOutlined className="text-green-400" /> },
-    { key: 'mc_f1', label: 'MC GAUGING F1', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <ToolOutlined className="text-blue-400" /> },
+    { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', bar: 'bg-amber-400', icon: <ScanOutlined className="text-amber-400" /> },
+    { key: 'gr_f1', label: 'GAUGING ROOM F1', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', bar: 'bg-green-400', icon: <ToolOutlined className="text-green-400" /> },
+    { key: 'mc_f1', label: 'MC GAUGING F1', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', bar: 'bg-blue-400', icon: <ToolOutlined className="text-blue-400" /> },
 ];
 
 const DATE_FIELDS: { name: keyof DashboardFilter; label: string; type: string }[] = [
@@ -292,11 +293,11 @@ const Dashboard = () => {
                 <div className="flex-1" />
                 <div className="flex items-center gap-2 pr-2">
                     {lastRefresh && (
-                        <p className="text-xs text-gray-300">
+                        <p className="text-xs text-gray-400">
                             Updated {lastRefresh.toLocaleTimeString('th-TH')}
                         </p>
                     )}
-                    <button onClick={refreshSummaryTab}
+                    <button onClick={refreshSummaryTab} title="Refresh" aria-label="Refresh"
                         className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                         <ReloadOutlined />
                     </button>
@@ -309,17 +310,28 @@ const Dashboard = () => {
 
                     {/* Cards */}
                     <div className="grid grid-cols-4 gap-3 shrink-0">
-                        {CARDS.map(c => (
-                            <div key={c.key} className={`${c.bg} border ${c.border} rounded-xl p-4`}>
-                                <div className="flex items-center gap-2 mb-2">
-                                    {c.icon}
-                                    <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{c.label}</p>
+                        {CARDS.map(c => {
+                            const qty = summary?.[c.key] ?? 0;
+                            const total = summary?.total_qty ?? 0;
+                            const pct = total === 0 ? 0 : (qty / total) * 100;
+                            return (
+                                <div key={c.key} className={`${c.bg} border ${c.border} rounded-xl p-4`}>
+                                    <div className="flex items-center gap-2 mb-2">
+                                        {c.icon}
+                                        <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{c.label}</p>
+                                    </div>
+                                    <div className="flex items-baseline gap-2">
+                                        <p className={`text-4xl font-bold ${c.color}`}>{qty.toLocaleString()}</p>
+                                        {c.bar && <p className="text-sm font-medium text-gray-500 tabular-nums">{Math.round(pct)}%</p>}
+                                    </div>
+                                    {c.bar && (
+                                        <div className="mt-2 h-1.5 rounded-full bg-white/70 overflow-hidden">
+                                            <div className={`h-full rounded-full ${c.bar}`} style={{ width: `${pct}%` }} />
+                                        </div>
+                                    )}
                                 </div>
-                                <p className={`text-4xl font-bold ${c.color}`}>
-                                    {(summary?.[c.key] ?? 0).toLocaleString()}
-                                </p>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
 
                     {/* Middle */}
@@ -359,7 +371,7 @@ const Dashboard = () => {
                                                     <td className="px-4 py-2.5">
                                                         <div className="flex flex-wrap gap-1">
                                                             {l.mc_nos.map(mc => (
-                                                                <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">
+                                                                <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
                                                                     {mc}
                                                                 </span>
                                                             ))}
