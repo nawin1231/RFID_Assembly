@@ -71,13 +71,15 @@ const PAGE_SIZE = 20;
 
 const TH_CLS = 'px-4 py-2.5 text-xs font-semibold text-gray-500 border-b border-gray-200 whitespace-nowrap uppercase tracking-wider';
 
-// Fixed widths for short codes; M/C NO. takes the rest because its chips wrap.
+// table-fixed takes these widths from the header row, so columns do not shift with the data.
 const DAILY_COLUMNS = [
-    { label: 'M/C NO.', cls: 'text-left w-150 border-r' },
-    { label: 'PART NO.', cls: 'text-left border-r' },
-    { label: 'WOS', cls: 'text-left w-32 border-r' },
-    { label: 'QTY', cls: 'text-right w-28' },
+    { label: 'M/C NO.', cls: 'text-left w-[40%] border-r' },
+    { label: 'PART NO.', cls: 'text-left w-[25%] border-r' },
+    { label: 'WOS', cls: 'text-left w-[20%] border-r' },
+    { label: 'QTY', cls: 'text-right w-[15%]' },
 ];
+
+const DAILY_TD = 'px-4 py-2.5 border-b border-gray-200';
 
 const Dashboard = () => {
     const [activeTab, setActiveTab] = useState<Tab>('summary');
@@ -348,7 +350,7 @@ const Dashboard = () => {
                                 )}
                             </div>
                             <div className="overflow-auto flex-1">
-                                <table className="w-full border-collapse">
+                                <table className="w-full table-fixed border-collapse">
                                     <thead className="bg-gray-50 sticky top-0 z-10">
                                         <tr>
                                             {DAILY_COLUMNS.map(col => (
@@ -361,36 +363,38 @@ const Dashboard = () => {
                                             <tr><td colSpan={4} className="text-center py-8 text-gray-300 text-xs">No data</td></tr>
                                         </tbody>
                                     )}
-                                    {/* One tbody per part: zebra by part, thick border between parts 
+                                    {/* One tbody per part; PART NO. is merged across its WOS rows
                                     //! need to discuss with P'Bo about which data should be Bold or normal text
                                     */}
-                                    {dailyParts.map((p, pi) => (
-                                        <tbody key={p.part_no} className={`border-b-2 border-gray-200 ${pi % 2 === 1 ? 'bg-gray-50/70' : 'bg-white'}`}>
+                                    {dailyParts.map(p => (
+                                        <tbody key={p.part_no}>
                                             {p.lines.map((l, li) => (
-                                                <tr key={l.wos} className={li > 0 ? 'border-t border-dashed border-gray-200' : ''}>
-                                                    <td className="px-4 py-2.5 border-r border-gray-200">
+                                                <tr key={l.wos}>
+                                                    <td className={`${DAILY_TD} border-r`}>
                                                         <div className="flex flex-wrap gap-1">
                                                             {l.mc_nos.map(mc => (
-                                                                <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-gray-100 text-gray-600 border border-gray-200 whitespace-nowrap">
+                                                                <span key={mc} className="text-xs px-1.5 leading-5 rounded bg-gray-50 text-gray-500 border border-gray-200 whitespace-nowrap">
                                                                     {mc}
                                                                 </span>
                                                             ))}
                                                         </div>
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap align-top border-r border-gray-200">
-                                                        {li === 0 ? p.part_no : ''}
-                                                    </td>
-                                                    <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap border-r border-gray-200">{l.wos}</td>
-                                                    <td className="px-4 py-2.5 text-sm font-bold text-gray-800 text-right tabular-nums">{l.qty.toLocaleString()}</td>
+                                                    {li === 0 && (
+                                                        <td rowSpan={p.lines.length} className={`${DAILY_TD} border-r align-top text-sm font-semibold text-gray-900 truncate`}>
+                                                            {p.part_no}
+                                                        </td>
+                                                    )}
+                                                    <td className={`${DAILY_TD} border-r text-sm font-mono text-gray-500 truncate`}>{l.wos}</td>
+                                                    <td className={`${DAILY_TD} text-sm font-bold text-gray-800 text-right tabular-nums`}>{l.qty.toLocaleString()}</td>
                                                 </tr>
                                             ))}
                                         </tbody>
                                     ))}
                                     {dailyParts.length > 0 && (
-                                        <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-200">
+                                        <tfoot className="sticky bottom-0 bg-white">
                                             <tr>
-                                                <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200">TOTAL :</td>
-                                                <td className="px-4 py-3 text-base font-bold text-slate-900 text-right tabular-nums">{dailyTotalQty.toLocaleString()}</td>
+                                                <td colSpan={3} className="px-4 py-3 border-y-2 border-r border-gray-200 text-sm font-bold text-gray-600 uppercase tracking-wider">TOTAL :</td>
+                                                <td className="px-4 py-3 border-y-2 border-gray-200 text-base font-bold text-slate-900 text-right tabular-nums">{dailyTotalQty.toLocaleString()}</td>
                                             </tr>
                                         </tfoot>
                                     )}
