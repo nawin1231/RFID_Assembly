@@ -1,9 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { backendApi } from '../../config/instance';
 import Swal from 'sweetalert2';
+import type { SweetAlertIcon } from 'sweetalert2';
+import type { MockDoneAddResult, MockDoneRemoveResult, MockDoneRequest, MockDoneRow } from '../../types/api';
 
-const showAlert = (msg, type) => {
-  Swal.fire({
+const showAlert = (msg: string, type: SweetAlertIcon) => {
+  void Swal.fire({
     position: 'center',
     icon: type,
     title: msg,
@@ -14,12 +16,12 @@ const showAlert = (msg, type) => {
 
 const MockDone = () => {
   const [lotNo, setLotNo] = useState('');
-  const [list, setList] = useState([]);
+  const [list, setList] = useState<MockDoneRow[]>([]);
   const [loading, setLoading] = useState(false);
-  const inputRef = useRef(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    fetchList();
+    void fetchList();
     const refocus = () => setTimeout(() => inputRef.current?.focus(), 0);
     refocus();
     document.addEventListener('click', refocus);
@@ -28,24 +30,24 @@ const MockDone = () => {
 
   const fetchList = async () => {
     try {
-      const res = await backendApi.get('/mock-done');
+      const res = await backendApi.get<MockDoneRow[]>('/mock-done');
       setList(res.data);
     } catch (err) {
       console.error('fetchList failed', err);
     }
   };
 
-  const handleAdd = async (e) => {
+  const handleAdd = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     const target = lotNo.trim();
     if (!target) return;
 
     setLoading(true);
     try {
-      const res = await backendApi.post('/mock-done', { lot_no: target });
+      const res = await backendApi.post<MockDoneAddResult>('/mock-done', { lot_no: target } satisfies MockDoneRequest);
       if (res.data.result === 'OK') {
         showAlert('Added!', 'success');
-        fetchList();
+        void fetchList();
       } else {
         showAlert(res.data.result, 'error');
       }
@@ -57,10 +59,10 @@ const MockDone = () => {
     }
   };
 
-  const handleDelete = async (lot_no) => {
+  const handleDelete = async (lot_no: string) => {
     try {
-      await backendApi.delete(`/mock-done/${lot_no}`);
-      fetchList();
+      await backendApi.delete<MockDoneRemoveResult>(`/mock-done/${lot_no}`);
+      void fetchList();
     } catch (err) {
       console.error('handleDelete failed', err);
     }
