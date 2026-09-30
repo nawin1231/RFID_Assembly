@@ -34,7 +34,15 @@ const advance = (db: MockDb, fromStatus: number, toStatus: number) =>
         return result('OK');
     };
 
-export const lotRoutes = (db: MockDb): Route[] => [
+// Mirrors Stored_tb_assy_completed: the lot's status must belong to a process with can_clear_tag,
+// and a completed lot cannot be cleared again.
+const canClear = (db: MockDb, lot: LotRow): boolean => {
+    if (lot.status_id === COMPLETED) return false;
+    const status = db.statuses.find((s) => s.id === lot.status_id);
+    return db.processes.some((p) => p.id === status?.process_id && p.can_clear_tag);
+};
+
+export const lotRoutes =(db: MockDb): Route[] => [
     {
         method: 'GET',
         path: '/lot/:lot_no',
@@ -85,7 +93,7 @@ export const lotRoutes = (db: MockDb): Route[] => [
         handler: ({ body }: HandlerInput<CompletedRequest>): HandlerResult<CompletedResult> => {
             const lot = db.lots.find((l) => l.lot_no === body.lot_no);
             if (!lot) return result('LOT_NOT_FOUND');
-            if (lot.status_id !== MC_GAUGING_F1) return result('INVALID_PROCESS');
+            if (!canClear(db, lot)) return result('INVALID_PROCESS');
             const now = db.now();
             Object.assign(lot, {
                 status_id: COMPLETED, cleared_at: now, updated_at: now,

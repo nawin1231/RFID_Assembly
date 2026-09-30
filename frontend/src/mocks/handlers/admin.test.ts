@@ -45,14 +45,21 @@ describe('/status', () => {
 
 describe('/process', () => {
     test('lists processes ordered by code', async () => {
-        await call('POST', '/process', { process_code: '0100', process_name: 'FIRST' });
+        await call('POST', '/process', { process_code: '0100', process_name: 'FIRST', can_clear_tag: false });
         const { data } = await call<Process[]>('GET', '/process');
         expect(data.map((p) => p.process_code)).toEqual(['0100', '1400', '1500']);
     });
 
+    test('creates a process with can_clear_tag', async () => {
+        await call('POST', '/process', { process_code: '0100', process_name: 'FIRST', can_clear_tag: true });
+        expect(db.processes.find((p) => p.process_code === '0100')).toMatchObject({ can_clear_tag: true });
+    });
+
     test('updates by string id', async () => {
-        await call('PUT', '/process/1', { process_code: '1401', process_name: 'RENAMED' });
-        expect(db.processes.find((p) => p.id === 1)).toMatchObject({ process_code: '1401', process_name: 'RENAMED' });
+        await call('PUT', '/process/1', { process_code: '1401', process_name: 'RENAMED', can_clear_tag: true });
+        expect(db.processes.find((p) => p.id === 1)).toMatchObject({
+            process_code: '1401', process_name: 'RENAMED', can_clear_tag: true,
+        });
     });
 
     test('refuses to delete a process used by a status', async () => {

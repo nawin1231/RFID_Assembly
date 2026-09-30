@@ -18,6 +18,7 @@ export interface Process {
     id: number;
     process_code: string;
     process_name: string;
+    can_clear_tag: boolean;
 }
 
 export interface Status {

@@ -3,7 +3,7 @@ import { backendApi } from '../../../config/instance';
 import Swal from 'sweetalert2';
 import type { AdminResult, Process, ProcessRequest } from '../../../types/api';
 
-const defaultForm: ProcessRequest = { process_code: '', process_name: '' };
+const defaultForm: ProcessRequest = { process_code: '', process_name: '', can_clear_tag: false };
 
 const ProcessTab = () => {
     const [processes, setProcesses] = useState<Process[]>([]);
@@ -43,7 +43,7 @@ const ProcessTab = () => {
 
     const handleEdit = (p: Process) => {
         setEditId(p.id);
-        setForm({ process_code: p.process_code, process_name: p.process_name });
+        setForm({ process_code: p.process_code, process_name: p.process_name, can_clear_tag: p.can_clear_tag });
     };
 
     const handleDelete = async (id: number) => {
@@ -77,6 +77,11 @@ const ProcessTab = () => {
                     <input name="process_name" value={form.process_name} onChange={handleChange}
                         placeholder="Process Name เช่น BEFORE ISSUE"
                         className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+                    <label className="flex items-center gap-2 text-sm text-gray-600 cursor-pointer">
+                        <input type="checkbox" checked={form.can_clear_tag}
+                            onChange={(e) => setForm({ ...form, can_clear_tag: e.target.checked })} />
+                        Can clear tag
+                    </label>
                     <div className="flex gap-2 pt-1">
                         <button onClick={handleSubmit}
                             className="flex-1 h-9 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition-colors">
@@ -105,7 +110,7 @@ const ProcessTab = () => {
                     <table className="w-full">
                         <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                                {['Process Code', 'Process Name', ''].map((col, i) => (
+                                {['Process Code', 'Process Name', 'Can Clear Tag', ''].map((col, i) => (
                                     <th key={i} className="text-left px-4 py-2.5 text-xs font-medium text-gray-400 border-b border-gray-100">
                                         {col}
                                     </th>
@@ -117,6 +122,7 @@ const ProcessTab = () => {
                                 <tr key={p.id} className="border-b border-gray-50 hover:bg-gray-50">
                                     <td className="px-4 py-3 text-sm font-mono text-blue-600">{p.process_code}</td>
                                     <td className="px-4 py-3 text-sm text-gray-800">{p.process_name}</td>
+                                    <td className="px-4 py-3 text-sm text-gray-500">{p.can_clear_tag ? 'Yes' : 'No'}</td>
                                     <td className="px-4 py-3 text-right space-x-3">
                                         <button onClick={() => handleEdit(p)}
                                             className="text-xs text-blue-400 hover:text-blue-600">แก้ไข</button>

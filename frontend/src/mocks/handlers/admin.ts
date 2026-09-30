@@ -72,6 +72,7 @@ export const adminRoutes = (db: MockDb): Route[] => [
         handler: ({ body }: HandlerInput<ProcessRequest>): HandlerResult<AdminResult> => {
             db.processes.push({
                 id: nextId(db.processes), process_code: body.process_code, process_name: body.process_name,
+                can_clear_tag: body.can_clear_tag,
             });
             return OK;
         },
@@ -81,7 +82,11 @@ export const adminRoutes = (db: MockDb): Route[] => [
         path: '/process/:id',
         handler: ({ params, body }: HandlerInput<ProcessRequest>): HandlerResult<AdminResult> => {
             const process = byId(db.processes, params.id);
-            if (process) Object.assign(process, { process_code: body.process_code, process_name: body.process_name });
+            if (process) {
+                Object.assign(process, {
+                    process_code: body.process_code, process_name: body.process_name, can_clear_tag: body.can_clear_tag,
+                });
+            }
             return OK;
         },
     },

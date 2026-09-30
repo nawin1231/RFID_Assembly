@@ -2,8 +2,8 @@ import type { Process } from '../../types/api';
 import type { StatusRow } from '../types';
 
 export const buildProcesses = (): Process[] => [
-    { id: 1, process_code: '1400', process_name: 'BEFORE ISSUE' },
-    { id: 2, process_code: '1500', process_name: 'GAUGING' },
+    { id: 1, process_code: '1400', process_name: 'BEFORE ISSUE', can_clear_tag: false },
+    { id: 2, process_code: '1500', process_name: 'GAUGING', can_clear_tag: true },
 ];
 
 export const buildStatuses = (): StatusRow[] => [

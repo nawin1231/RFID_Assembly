@@ -128,6 +128,23 @@ describe('POST /completed', () => {
     test('rejects an unknown lot', async () => {
         expect((await post('/completed', { lot_no: 'NOPE' })).data.result).toBe('LOT_NOT_FOUND');
     });
+
+    test('clears any lot whose process has can_clear_tag', async () => {
+        const lot = lotAt(2);
+        expect((await post('/completed', { lot_no: lot.lot_no })).data.result).toBe('OK');
+        expect(lot.status_id).toBe(4);
+    });
+
+    test('rejects a lot whose process has can_clear_tag off', async () => {
+        db.processes.forEach((p) => { p.can_clear_tag = false; });
+        const lot = lotAt(3);
+        expect((await post('/completed', { lot_no: lot.lot_no })).data.result).toBe('INVALID_PROCESS');
+        expect(lot.status_id).toBe(3);
+    });
+
+    test('rejects a lot that is already completed', async () => {
+        expect((await post('/completed', { lot_no: lotAt(4).lot_no })).data.result).toBe('INVALID_PROCESS');
+    });
 });
 
 test('full flow: register, scan GR, scan MC, clear', async () => {
