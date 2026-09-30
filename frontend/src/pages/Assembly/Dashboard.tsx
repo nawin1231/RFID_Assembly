@@ -9,7 +9,9 @@ import {
     DownloadOutlined,
     FileExcelOutlined,
 } from '@ant-design/icons';
+import { groupDailyInventoryByPart } from './dailyInventory';
 import type {
+    DailyInventoryRow,
     DashboardFilter,
     DashboardResponse,
     DashboardSummary,
@@ -71,6 +73,7 @@ const Dashboard = () => {
     const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
     const [summary, setSummary] = useState<DashboardSummary | null>(null);
     const [processSummary, setProcessSummary] = useState<ProcessSummaryRow[]>([]);
+    const [dailyInventory, setDailyInventory] = useState<DailyInventoryRow[]>([]);
     const [history, setHistory] = useState<HistoryRow[]>([]);
     const [locations, setLocations] = useState<LocationRow[]>([]);
     const [filter, setFilter] = useState(defaultFilter);
@@ -88,6 +91,8 @@ const Dashboard = () => {
     // part options จาก history
     const partOptions = [...new Set(history.map(l => l.brg_type).filter(Boolean))].sort();
 
+    const dailyGroups = groupDailyInventoryByPart(dailyInventory);
+
     // ===== FETCH =====
 
     const fetchSummary = async () => {
@@ -102,6 +107,22 @@ const Dashboard = () => {
         } catch (err) {
             console.error(err);
         }
+    };
+
+    // Separate from fetchSummary: this endpoint is not built on the backend yet,
+    // so its failure must not blank the cards and the process summary.
+    const fetchDailyInventory = async () => {
+        try {
+            const res = await backendApi.get<DailyInventoryRow[]>('/dashboard/daily-inventory');
+            setDailyInventory(res.data);
+        } catch (err) {
+            console.error(err);
+        }
+    };
+
+    const refreshSummaryTab = () => {
+        void fetchSummary();
+        void fetchDailyInventory();
     };
 
     const fetchHistory = async (f: DashboardFilter = filter) => {
@@ -128,9 +149,9 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        void fetchSummary();
+        refreshSummaryTab();
         void fetchLocations();
-        intervalRef.current = setInterval(() => void fetchSummary(), 3 * 60 * 1000);
+        intervalRef.current = setInterval(refreshSummaryTab, 3 * 60 * 1000);
         return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, []);
 
@@ -261,7 +282,7 @@ const Dashboard = () => {
                             Updated {lastRefresh.toLocaleTimeString('th-TH')}
                         </p>
                     )}
-                    <button onClick={() => void fetchSummary()}
+                    <button onClick={refreshSummaryTab}
                         className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                         <ReloadOutlined />
                     </button>
@@ -290,14 +311,45 @@ const Dashboard = () => {
                     {/* Middle */}
                     <div className="flex gap-3 flex-1 min-h-0">
 
-                        {/* Daily Inventory Table — รอ API */}
+                        {/* Daily Inventory Table */}
                         <div className="flex-1 bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-0">
                             <div className="px-4 py-3 border-b border-gray-100 shrink-0">
                                 <p className="text-sm font-semibold text-gray-600">Daily Inventory Gauging</p>
-                                <p className="text-xs text-gray-400 mt-0.5">M/C No. | Part No. | WOS | QTY</p>
                             </div>
-                            <div className="flex-1 flex items-center justify-center">
-                                <p className="text-xs text-gray-300">รอ API จาก IT</p>
+                            <div className="overflow-auto flex-1">
+                                <table className="w-full">
+                                    <thead className="sticky top-0">
+                                        <tr className="bg-emerald-700">
+                                            {['M/C NO.', 'PART NO.', 'WOS', 'QTY'].map((col, i) => (
+                                                <th key={col} className={`px-4 py-3 text-xs font-semibold text-white uppercase tracking-wider ${i === 3 ? 'text-right' : 'text-left'}`}>
+                                                    {col}
+                                                </th>
+                                            ))}
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {dailyGroups.length === 0 && (
+                                            <tr><td colSpan={4} className="text-center py-8 text-gray-300 text-xs">No data</td></tr>
+                                        )}
+                                        {dailyGroups.flatMap(g => g.wos.map((w, i) => (
+                                            <tr key={`${g.part_no}-${w.wos}`}
+                                                className={i === g.wos.length - 1 ? 'border-b border-gray-200' : 'border-b border-gray-100'}>
+                                                {i === 0 && (
+                                                    <>
+                                                        <td rowSpan={g.wos.length} className="px-4 py-3 text-sm text-gray-600 align-middle border-r border-gray-100">
+                                                            {g.mc_nos.join(', ')}
+                                                        </td>
+                                                        <td rowSpan={g.wos.length} className="px-4 py-3 text-sm font-semibold text-gray-700 align-middle border-r border-gray-100">
+                                                            {g.part_no}
+                                                        </td>
+                                                    </>
+                                                )}
+                                                <td className="px-4 py-3 text-sm font-mono text-gray-500">{w.wos}</td>
+                                                <td className="px-4 py-3 text-sm font-bold text-gray-800 text-right">{w.qty.toLocaleString()}</td>
+                                            </tr>
+                                        )))}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
