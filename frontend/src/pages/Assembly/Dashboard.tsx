@@ -73,8 +73,8 @@ const TH_CLS = 'px-4 py-2.5 text-xs font-semibold text-gray-500 border-b border-
 
 // Fixed widths for short codes; M/C NO. takes the rest because its chips wrap.
 const DAILY_COLUMNS = [
-    { label: 'M/C NO.', cls: 'text-left' },
-    { label: 'PART NO.', cls: 'text-left w-40' },
+    { label: 'M/C NO.', cls: 'text-left w-150' },
+    { label: 'PART NO.', cls: 'text-left ' },
     { label: 'WOS', cls: 'text-left w-32' },
     { label: 'QTY', cls: 'text-right w-28' },
 ];
