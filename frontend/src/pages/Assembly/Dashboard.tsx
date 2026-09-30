@@ -6,10 +6,10 @@ import {
     ScanOutlined,
     ToolOutlined,
     ReloadOutlined,
-    DownloadOutlined,
     FileExcelOutlined,
 } from '@ant-design/icons';
 import { groupDailyInventory } from './dailyInventory';
+import { toProcessShares } from './processBreakdown';
 import type {
     DailyInventoryRow,
     DashboardFilter,
@@ -106,6 +106,7 @@ const Dashboard = () => {
     const dailyWosCount = dailyParts.reduce((sum, p) => sum + p.lines.length, 0);
     const dailyMachineCount = new Set(dailyInventory.map(r => r.mc_no)).size;
     const dailyTotalQty = dailyParts.reduce((sum, p) => sum + p.qty, 0);
+    const processBreakdown = toProcessShares(processSummary);
 
     // ===== FETCH =====
 
@@ -393,58 +394,45 @@ const Dashboard = () => {
                             </div>
                         </div>
 
-                        {/* Inventory Summary */}
-                        <div className="w-[420px] flex flex-col gap-2 min-h-0">
-
-                            {/* Export button — มุมขวาบนนอกตาราง */}
-                            <div className="flex justify-end">
+                        {/* Inventory by Process: height follows content, bars are neutral because
+                            a process (e.g. GAUGING) can span more than one stage colour */}
+                        <div className="w-[420px] self-start bg-white border border-gray-200 rounded-xl overflow-hidden">
+                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                                <p className="text-sm font-semibold text-gray-600">Inventory by Process</p>
                                 <button onClick={handleExportSummary}
-                                    className="h-8 px-4 text-base rounded-full bg-blue-50 border border-blue-200 text-blue-500 hover:bg-blue-100 flex items-center gap-2 transition-colors">
-                                    <DownloadOutlined />  โหลด Excel
+                                    className="h-8 px-4 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-500 border border-emerald-200 rounded-lg transition-colors font-medium">
+                                    ↓ Export Excel
                                 </button>
                             </div>
-
-                            {/* Table */}
-                            <div className="bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden flex-1 min-h-0">
-                                <div className="overflow-auto flex-1">
-                                    <table className="w-full">
-                                        <thead className="bg-gray-50 sticky top-0">
-                                            <tr>
-                                                {['PROCESS_CODE', 'PROCESS_NAME', 'INVENTORY_QTY'].map((col, i) => (
-                                                    <th key={i} className={`${TH_CLS} ${i === 2 ? 'text-right' : 'text-left'}`}>
-                                                        {col}
-                                                    </th>
-                                                ))}
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {processSummary.length === 0 && (
-                                                <tr><td colSpan={3} className="text-center py-8 text-gray-300 text-xs">No data</td></tr>
-                                            )}
-                                            {processSummary.map((p, i) => (
-                                                <tr key={i} className="border-b border-gray-100 hover:bg-gray-50">
-                                                    <td className="px-4 py-4 text-sm font-mono text-gray-500">{p.process_code}</td>
-                                                    <td className="px-4 py-4 text-sm font-semibold text-gray-700">{p.process_name}</td>
-                                                    <td className="px-4 py-4 text-sm font-bold text-gray-800 text-right">{p.inventory_qty?.toLocaleString()}</td>
-                                                </tr>
-                                            ))}
-                                        </tbody>
-                                        {processSummary.length > 0 && (
-                                            <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-200">
-                                                <tr>
-                                                    <td colSpan={2} className="px-4 py-4 text-sm font-bold text-gray-600 uppercase tracking-wider">
-                                                        TOTAL INVENTORY :
-                                                    </td>
-                                                    <td className="px-4 py-4 text-base font-bold text-slate-900 text-right tabular-nums">
-                                                        {processSummary.reduce((sum, p) => sum + (p.inventory_qty || 0), 0).toLocaleString()}
-                                                    </td>
-                                                </tr>
-                                            </tfoot>
-                                        )}
-                                    </table>
-                                </div>
-                            </div>
-
+                            {processBreakdown.shares.length === 0 ? (
+                                <p className="text-center py-8 text-gray-300 text-xs">No data</p>
+                            ) : (
+                                <>
+                                    <ul className="px-4 py-2">
+                                        {processBreakdown.shares.map(s => (
+                                            <li key={s.process_code} className="py-3">
+                                                <div className="flex items-baseline justify-between gap-3 mb-1.5">
+                                                    <p className="text-sm font-semibold text-gray-700 truncate">
+                                                        {s.process_name}
+                                                        <span className="ml-2 text-xs font-mono font-normal text-gray-400">{s.process_code}</span>
+                                                    </p>
+                                                    <p className="text-sm tabular-nums whitespace-nowrap">
+                                                        <span className="font-bold text-gray-800">{s.qty.toLocaleString()}</span>
+                                                        <span className="ml-2 inline-block w-12 text-right text-xs text-gray-500">{s.pct.toFixed(1)}%</span>
+                                                    </p>
+                                                </div>
+                                                <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+                                                    <div className="h-full rounded-full bg-slate-500" style={{ width: `${s.pct}%` }} />
+                                                </div>
+                                            </li>
+                                        ))}
+                                    </ul>
+                                    <div className="px-4 py-3 border-t-2 border-gray-200 flex items-baseline justify-between">
+                                        <p className="text-sm font-bold text-gray-600 uppercase tracking-wider">Total inventory</p>
+                                        <p className="text-base font-bold text-slate-900 tabular-nums">{processBreakdown.total.toLocaleString()}</p>
+                                    </div>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
