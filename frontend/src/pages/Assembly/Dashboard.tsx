@@ -349,7 +349,9 @@ const Dashboard = () => {
                                             <tr><td colSpan={4} className="text-center py-8 text-gray-300 text-xs">No data</td></tr>
                                         </tbody>
                                     )}
-                                    {/* One tbody per part: zebra by part, thick border between parts */}
+                                    {/* One tbody per part: zebra by part, thick border between parts 
+                                    //! need to discuss with P'Bo about which data should be Bold or normal text
+                                    */}
                                     {dailyParts.map((p, pi) => (
                                         <tbody key={p.part_no} className={`border-b-2 border-gray-200 ${pi % 2 === 1 ? 'bg-gray-50/70' : 'bg-white'}`}>
                                             {p.lines.map((l, li) => (
