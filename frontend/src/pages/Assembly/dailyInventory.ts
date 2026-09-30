@@ -1,23 +1,35 @@
 import type { DailyInventoryRow } from '../../types/api';
 
-export interface DailyInventoryGroup {
-    part_no: string;
+export interface DailyInventoryLine {
     wos: string;
     mc_nos: string[];
     qty: number;
 }
 
-// Keyed by part + WOS (not part only) so a second WOS for a part shows as its own row instead of being hidden.
-export const groupDailyInventory = (rows: DailyInventoryRow[]): DailyInventoryGroup[] => {
-    const groups = new Map<string, { part_no: string; wos: string; mcs: Set<string>; qty: number }>();
+export interface DailyInventoryPart {
+    part_no: string;
+    qty: number;
+    lines: DailyInventoryLine[];
+}
+
+// A part can have many WOS and many machines; each machine row belongs to one WOS,
+// so machines are listed per WOS line, not per part.
+export const groupDailyInventory = (rows: DailyInventoryRow[]): DailyInventoryPart[] => {
+    const parts = new Map<string, Map<string, { mcs: Set<string>; qty: number }>>();
     for (const r of rows) {
-        const key = `${r.part_no}|${r.wos}`;
-        const g = groups.get(key) ?? { part_no: r.part_no, wos: r.wos, mcs: new Set<string>(), qty: 0 };
-        g.mcs.add(r.mc_no);
-        g.qty += r.qty;
-        groups.set(key, g);
+        const lines = parts.get(r.part_no) ?? new Map<string, { mcs: Set<string>; qty: number }>();
+        const line = lines.get(r.wos) ?? { mcs: new Set<string>(), qty: 0 };
+        line.mcs.add(r.mc_no);
+        line.qty += r.qty;
+        lines.set(r.wos, line);
+        parts.set(r.part_no, lines);
     }
-    return [...groups.values()]
-        .sort((a, b) => a.part_no.localeCompare(b.part_no) || a.wos.localeCompare(b.wos))
-        .map(({ part_no, wos, mcs, qty }) => ({ part_no, wos, mc_nos: [...mcs].sort(), qty }));
+    return [...parts.entries()]
+        .sort(([a], [b]) => a.localeCompare(b))
+        .map(([part_no, lines]) => {
+            const sorted = [...lines.entries()]
+                .sort(([a], [b]) => a.localeCompare(b))
+                .map(([wos, { mcs, qty }]) => ({ wos, mc_nos: [...mcs].sort(), qty }));
+            return { part_no, qty: sorted.reduce((sum, l) => sum + l.qty, 0), lines: sorted };
+        });
 };

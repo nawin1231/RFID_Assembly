@@ -91,9 +91,10 @@ const Dashboard = () => {
     // part options จาก history
     const partOptions = [...new Set(history.map(l => l.brg_type).filter(Boolean))].sort();
 
-    const dailyGroups = groupDailyInventory(dailyInventory);
+    const dailyParts = groupDailyInventory(dailyInventory);
+    const dailyWosCount = dailyParts.reduce((sum, p) => sum + p.lines.length, 0);
     const dailyMachineCount = new Set(dailyInventory.map(r => r.mc_no)).size;
-    const dailyTotalQty = dailyGroups.reduce((sum, g) => sum + g.qty, 0);
+    const dailyTotalQty = dailyParts.reduce((sum, p) => sum + p.qty, 0);
 
     // ===== FETCH =====
 
@@ -317,45 +318,59 @@ const Dashboard = () => {
                         <div className="flex-1 bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-0">
                             <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <p className="text-sm font-semibold text-gray-600">Daily Inventory Gauging</p>
-                                {dailyGroups.length > 0 && (
+                                {dailyParts.length > 0 && (
                                     <p className="text-xs text-gray-400">
-                                        {dailyGroups.length} parts · {dailyMachineCount} machines
+                                        {dailyParts.length} parts · {dailyWosCount} WOS · {dailyMachineCount} machines
                                     </p>
                                 )}
                             </div>
                             <div className="overflow-auto flex-1">
-                                <table className="w-full">
-                                    <thead className="sticky top-0">
+                                <table className="w-full border-collapse">
+                                    <thead className="sticky top-0 z-10">
                                         <tr className="bg-emerald-700">
-                                            {['PART NO.', 'WOS', 'M/C NO.', 'QTY'].map((col, i) => (
+                                            {['M/C NO.', 'PART NO.', 'WOS', 'QTY'].map((col, i) => (
                                                 <th key={col} className={`px-4 py-3 text-xs font-semibold text-white uppercase tracking-wider ${i === 3 ? 'text-right' : 'text-left'}`}>
                                                     {col}
                                                 </th>
                                             ))}
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {dailyGroups.length === 0 && (
+                                    {dailyParts.length === 0 && (
+                                        <tbody>
                                             <tr><td colSpan={4} className="text-center py-8 text-gray-300 text-xs">No data</td></tr>
-                                        )}
-                                        {dailyGroups.map(g => (
-                                            <tr key={`${g.part_no}-${g.wos}`} className="border-b border-gray-100 hover:bg-gray-50">
-                                                <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap">{g.part_no}</td>
-                                                <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap">{g.wos}</td>
-                                                <td className="px-4 py-2.5">
-                                                    <div className="flex flex-wrap gap-1">
-                                                        {g.mc_nos.map(mc => (
-                                                            <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">
-                                                                {mc}
-                                                            </span>
-                                                        ))}
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-2.5 text-sm font-bold text-gray-800 text-right">{g.qty.toLocaleString()}</td>
-                                            </tr>
-                                        ))}
-                                    </tbody>
-                                    {dailyGroups.length > 0 && (
+                                        </tbody>
+                                    )}
+                                    {/* One tbody per part: zebra by part, thick border between parts */}
+                                    {dailyParts.map((p, pi) => (
+                                        <tbody key={p.part_no} className={`border-b-2 border-gray-200 ${pi % 2 === 1 ? 'bg-gray-50/70' : 'bg-white'}`}>
+                                            {p.lines.map((l, li) => (
+                                                <tr key={l.wos} className={li > 0 ? 'border-t border-dashed border-gray-200' : ''}>
+                                                    <td className="px-4 py-2.5">
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {l.mc_nos.map(mc => (
+                                                                <span key={mc} className="text-xs px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 border border-blue-200 whitespace-nowrap">
+                                                                    {mc}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap align-top">
+                                                        {li === 0 ? p.part_no : ''}
+                                                    </td>
+                                                    <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap">{l.wos}</td>
+                                                    <td className="px-4 py-2.5 text-sm font-bold text-gray-800 text-right tabular-nums">{l.qty.toLocaleString()}</td>
+                                                </tr>
+                                            ))}
+                                            {p.lines.length > 1 && (
+                                                <tr>
+                                                    <td colSpan={2} />
+                                                    <td className="px-4 pb-2.5 pt-1 text-xs font-semibold text-gray-400 uppercase tracking-wider">Subtotal</td>
+                                                    <td className="px-4 pb-2.5 pt-1 text-sm font-bold text-emerald-700 text-right tabular-nums">{p.qty.toLocaleString()}</td>
+                                                </tr>
+                                            )}
+                                        </tbody>
+                                    ))}
+                                    {dailyParts.length > 0 && (
                                         <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-200">
                                             <tr>
                                                 <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-600 uppercase tracking-wider">TOTAL :</td>
