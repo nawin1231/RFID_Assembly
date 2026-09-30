@@ -19,7 +19,7 @@ const ReaderConfig = () => {
             const res = await backendApi.get<ReaderConfigRow[]>('/readers-config');
             setReaders(res.data);
         } catch {
-            Swal.fire({ icon: 'error', title: 'ไม่สามารถโหลดหน้านี้ได้', timer: 1500, showConfirmButton: false });
+            void Swal.fire({ icon: 'error', title: 'ไม่สามารถโหลดหน้านี้ได้', timer: 1500, showConfirmButton: false });
         }
     };
 
@@ -43,9 +43,9 @@ const ReaderConfig = () => {
         try {
             await backendApi.put<AdminResult>('/readers-config', readers);
             await backendApi.post<AdminResult>('/readers-restart');
-            Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1500, showConfirmButton: false });
+            void Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1500, showConfirmButton: false });
         } catch {
-            Swal.fire({ icon: 'error', title: 'ไม่สามารถบันทึกได้!', timer: 1500, showConfirmButton: false });
+            void Swal.fire({ icon: 'error', title: 'ไม่สามารถบันทึกได้!', timer: 1500, showConfirmButton: false });
         } finally {
             setLoading(false);
         }
@@ -62,7 +62,7 @@ const ReaderConfig = () => {
     };
 
     const handleRemove = (index: number) => {
-        Swal.fire({
+        void Swal.fire({
             title: 'ต้องการลบ Reader นี้?',
             icon: 'warning',
             showCancelButton: true,

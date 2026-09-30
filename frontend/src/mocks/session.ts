@@ -1,6 +1,5 @@
+import { SESSION_KEY } from '../config/session';
 import type { UserRow } from './types';
-
-const SESSION_KEY = 'assy_user';
 
 export const seedMockSession = (users: UserRow[]): void => {
     if (sessionStorage.getItem(SESSION_KEY)) return;
