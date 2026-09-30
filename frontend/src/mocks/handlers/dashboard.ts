@@ -1,7 +1,9 @@
 import type { HandlerInput, HandlerResult, LotRow, MockDb, Route } from '../types';
 import type {
-    DashboardFilter, DashboardLot, DashboardResponse, HistoryRow, LocationRow, ProcessSummaryRow, Top5Row,
+    DailyInventoryRow, DashboardFilter, DashboardLot, DashboardResponse, HistoryRow, LocationRow,
+    ProcessSummaryRow, Top5Row,
 } from '../../types/api';
+import { buildDailyInventory } from '../fixtures/dailyInventory';
 
 const COMPLETED = 4;
 const MAX_ROWS = 200;
@@ -83,6 +85,11 @@ export const dashboardRoutes = (db: MockDb): Route[] => [
                 }));
             return { data: rows };
         },
+    },
+    {
+        method: 'GET',
+        path: '/dashboard/daily-inventory',
+        handler: (): HandlerResult<DailyInventoryRow[]> => ({ data: buildDailyInventory() }),
     },
     {
         method: 'GET',

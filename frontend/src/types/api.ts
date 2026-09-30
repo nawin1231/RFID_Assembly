@@ -81,6 +81,14 @@ export interface ProcessSummaryRow {
     inventory_qty: number;
 }
 
+// GET /dashboard/daily-inventory: one row per machine + WOS. Proposed contract, backend not built yet.
+export interface DailyInventoryRow {
+    mc_no: string;
+    part_no: string;
+    wos: string;
+    qty: number;
+}
+
 export interface LocationRow {
     location_name: string;
 }

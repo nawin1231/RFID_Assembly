@@ -1,7 +1,9 @@
 import { dashboardRoutes } from './dashboard';
 import { createTestDb, callRoute } from '../testUtils';
 import type { MockDb, Query, Route } from '../types';
-import type { DashboardResponse, DashboardSummary, HistoryRow, ProcessSummaryRow, LocationRow } from '../../types/api';
+import type {
+    DailyInventoryRow, DashboardResponse, DashboardSummary, HistoryRow, ProcessSummaryRow, LocationRow,
+} from '../../types/api';
 
 let db: MockDb;
 let routes: Route[];
@@ -74,6 +76,14 @@ describe('GET /dashboard/process-summary', () => {
         expect(rows.map((r) => r.process_code)).toEqual(['1400', '1500']);
         const total = rows.reduce((sum, r) => sum + r.inventory_qty, 0);
         expect(total).toBe((await get<Totals>('/dashboard')).summary.total_qty);
+    });
+});
+
+describe('GET /dashboard/daily-inventory', () => {
+    test('returns flat machine + WOS rows in the Bruno shape', async () => {
+        const rows = await get<DailyInventoryRow[]>('/dashboard/daily-inventory');
+        expect(rows.length).toBeGreaterThan(0);
+        rows.forEach((r) => expect(Object.keys(r).sort()).toEqual(['mc_no', 'part_no', 'qty', 'wos']));
     });
 });
 

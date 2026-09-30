@@ -11,7 +11,7 @@ const CALLED_BY_APP: [Method, string][] = [
     ['GET', '/lot/DEMO000001'], ['GET', '/lot-by-lot/DEMO000001'], ['GET', '/lot-by-tag/E2801160'],
     ['POST', '/register-tag'], ['POST', '/gauging-room-f1'], ['POST', '/mc-gauging-f1'], ['POST', '/completed'],
     ['GET', '/clear-tag/history'],
-    ['GET', '/dashboard'], ['GET', '/dashboard/process-summary'],
+    ['GET', '/dashboard'], ['GET', '/dashboard/process-summary'], ['GET', '/dashboard/daily-inventory'],
     ['GET', '/dashboard/history'], ['GET', '/dashboard/locations'],
     ['GET', '/mock-done'], ['POST', '/mock-done'], ['DELETE', '/mock-done/DEMO000001'],
     ['GET', '/readers-config'], ['PUT', '/readers-config'], ['GET', '/readers-status'], ['POST', '/readers-restart'],
@@ -19,8 +19,8 @@ const CALLED_BY_APP: [Method, string][] = [
 
 const routes = createRoutes(createTestDb());
 
-test('covers all 32 endpoints the app calls', () => {
-    expect(CALLED_BY_APP).toHaveLength(32);
+test('covers all 33 endpoints the app calls', () => {
+    expect(CALLED_BY_APP).toHaveLength(33);
 });
 
 test.each(CALLED_BY_APP)('%s %s has a mock', (method, path) => {
