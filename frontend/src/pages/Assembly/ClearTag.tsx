@@ -24,7 +24,7 @@ const showAlert = (msg: string, type: SweetAlertIcon) => {
     void Swal.fire({ position: 'center', icon: type, title: msg, showConfirmButton: false, timer: 1500 });
 };
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('en-CA');
 
 const TABS: { key: Tab; label: string }[] = [
     { key: 'clear',   label: 'Clear Tag' },

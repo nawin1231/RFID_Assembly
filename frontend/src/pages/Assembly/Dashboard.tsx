@@ -65,7 +65,7 @@ const TEXT_FIELDS: { name: keyof DashboardFilter; label: string; placeholder: st
     { name: 'lot_no', label: 'Lot No.', placeholder: 'Lot No.' },
 ];
 
-const today = () => new Date().toISOString().slice(0, 10);
+const today = () => new Date().toLocaleDateString('en-CA');
 const defaultFilter: Required<DashboardFilter> = { date_from: today(), date_to: today(), brg_type: '', wos: '', lot_no: '', status_id: '', location_name: '' };
 const PAGE_SIZE = 20;
 

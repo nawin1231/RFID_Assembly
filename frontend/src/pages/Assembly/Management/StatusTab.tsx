@@ -117,7 +117,7 @@ const StatusTab = () => {
                     <table className="w-full">
                         <thead className="bg-gray-50 sticky top-0">
                             <tr>
-                                {['Status', 'Location', ''].map((col, i) => (
+                                {['Status', 'Label', ''].map((col, i) => (
                                     <th key={i} className="text-left px-4 py-2.5 text-xs font-medium text-gray-400 border-b border-gray-100">
                                         {col}
                                     </th>
