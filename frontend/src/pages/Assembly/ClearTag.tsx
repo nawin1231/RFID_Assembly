@@ -8,6 +8,7 @@ import type {
     ClearTagHistoryRow,
     CompletedRequest,
     CompletedResult,
+    Process,
     Status,
 } from '../../types/api';
 
@@ -45,8 +46,8 @@ const ClearTag = () => {
     const [tagInput, setTagInput] = useState('');
     const [lotInfo, setLotInfo]   = useState<ActiveLot | null>(null);
     const [tagInfo, setTagInfo]   = useState<ActiveLot | null>(null);
-    const [statusId, setStatusId] = useState('');
-    const [statuses, setStatuses] = useState<Status[]>([]);
+    const [statuses, setStatuses]   = useState<Status[]>([]);
+    const [processes, setProcesses] = useState<Process[]>([]);
     const [remark, setRemark]     = useState('');
     const [empId, setEmpId]       = useState('');
     const [loading, setLoading]   = useState(false);
@@ -61,15 +62,25 @@ const ClearTag = () => {
 
     const isMatch = lotInfo && tagInfo && lotInfo.tag_id === tagInfo.tag_id;
 
-    useEffect(() => { void fetchStatuses(); }, []);
+    // The lot's process comes from its current status. Only processes with can_clear_tag can be cleared.
+    const lotStatus = lotInfo ? statuses.find(s => s.id === lotInfo.status_id) : undefined;
+    const lotProcess = processes.find(p => p.id === lotStatus?.process_id);
+    const canClearLot = !!lotProcess?.can_clear_tag;
+    const clearableProcesses = processes.filter(p => p.can_clear_tag);
+
+    useEffect(() => { void fetchMaster(); }, []);
     useEffect(() => {
         if (activeTab === 'history') void fetchHistory();
     }, [activeTab]);
 
-    const fetchStatuses = async () => {
+    const fetchMaster = async () => {
         try {
-            const res = await backendApi.get<Status[]>('/status');
-            setStatuses(res.data.filter(s => s.id !== 4));
+            const [statusRes, processRes] = await Promise.all([
+                backendApi.get<Status[]>('/status'),
+                backendApi.get<Process[]>('/process'),
+            ]);
+            setStatuses(statusRes.data);
+            setProcesses(processRes.data);
         } catch (err) { console.error(err); }
     };
 
@@ -115,11 +126,10 @@ const ClearTag = () => {
         if (!lotInfo)      return showAlert('กรุณากรอก Lot No.', 'warning');
         if (!tagInfo)      return showAlert('กรุณากรอก Tag ID', 'warning');
         if (!isMatch)      return showAlert('Lot และ Tag ไม่ตรงกัน', 'error');
-        if (!statusId)     return showAlert('กรุณาเลือก Process', 'warning');
+        if (!lotProcess || !canClearLot) return showAlert('Process นี้ Clear Tag ไม่ได้', 'error');
         if (!empId.trim()) return showAlert('กรุณากรอกรหัสพนักงาน', 'warning');
 
-        // statusId stays a string (it comes from <select>), so compare as string
-        const processName = statuses.find(s => String(s.id) === statusId)?.label_status || '';
+        const processName = lotProcess.process_name;
         const confirm = await Swal.fire({
             title: `Clear tag ของ ${lotInfo.lot_no}?`,
             html: `Process: <b>${processName}</b><br/>Emp: <b>${empId}</b>`,
@@ -153,7 +163,7 @@ const ClearTag = () => {
     const handleReset = () => {
         setLotInput(''); setTagInput('');
         setLotInfo(null); setTagInfo(null);
-        setStatusId(''); setRemark(''); setEmpId('');
+        setRemark(''); setEmpId('');
     };
 
     const fetchHistory = async (f: ClearTagHistoryQuery = historyFilter) => {
@@ -325,13 +335,19 @@ const ClearTag = () => {
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">
                                     Process <span className="text-orange-400 normal-case">*</span>
                                 </p>
-                                <select value={statusId} onChange={e => setStatusId(e.target.value)}
-                                    className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-emerald-400">
-                                    <option value="">-- เลือก Process --</option>
-                                    {statuses.map(s => (
-                                        <option key={s.id} value={s.id}>{s.label_status}</option>
+                                {/* TODO: need to discuss with user again: clear tag by process or location */}
+                                <select value={canClearLot ? String(lotProcess?.id) : ''} disabled
+                                    className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-60">
+                                    <option value="">{lotInfo ? '-- Clear ไม่ได้ --' : '-- สแกน Lot ก่อน --'}</option>
+                                    {clearableProcesses.map(p => (
+                                        <option key={p.id} value={p.id}>{p.process_name}</option>
                                     ))}
                                 </select>
+                                {lotInfo && !canClearLot && (
+                                    <p className="text-xs text-orange-500 mt-1">
+                                        Lot นี้อยู่ใน Process {lotProcess?.process_name ?? '—'} ซึ่ง Clear Tag ไม่ได้
+                                    </p>
+                                )}
                             </div>
                             <div>
                                 <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-1.5">Remark</p>
@@ -355,7 +371,7 @@ const ClearTag = () => {
                     {/* BUTTONS */}
                     <div className="flex gap-2 shrink-0">
                         <button onClick={handleClear}
-                            disabled={!lotInfo || !tagInfo || !isMatch || !statusId || loading}
+                            disabled={!lotInfo || !tagInfo || !isMatch || !canClearLot || loading}
                             className="flex-1 h-11 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-30">
                             {loading ? 'กำลัง Clear...' : 'Clear Tag'}
                         </button>
