@@ -6,7 +6,6 @@ import {
     ScanOutlined,
     ToolOutlined,
     ReloadOutlined,
-    FileExcelOutlined,
 } from '@ant-design/icons';
 import { groupDailyInventory } from './dailyInventory';
 import { toProcessShares } from './processBreakdown';
@@ -328,7 +327,7 @@ const Dashboard = () => {
 
                         {/* Daily Inventory Table */}
                         <div className="flex-1 bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-0">
-                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+                            <div className="h-14 px-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                                 <p className="text-sm font-semibold text-gray-600">Daily Inventory Gauging</p>
                                 {dailyParts.length > 0 && (
                                     <p className="text-xs text-gray-400">
@@ -397,7 +396,7 @@ const Dashboard = () => {
                         {/* Inventory by Process: height follows content, bars are neutral because
                             a process (e.g. GAUGING) can span more than one stage colour */}
                         <div className="w-[420px] self-start bg-white border border-gray-200 rounded-xl overflow-hidden">
-                            <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between">
+                            <div className="h-14 px-4 border-b border-gray-100 flex items-center justify-between">
                                 <p className="text-sm font-semibold text-gray-600">Inventory by Process</p>
                                 <button onClick={handleExportSummary}
                                     className="h-8 px-4 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-500 border border-emerald-200 rounded-lg transition-colors font-medium">
@@ -521,7 +520,7 @@ const Dashboard = () => {
 
                     {/* Table */}
                     <div className="flex-1 bg-white border border-gray-200 rounded-xl flex flex-col overflow-hidden min-h-0">
-                        <div className="px-4 py-3 border-b border-gray-100 flex items-center justify-between shrink-0">
+                        <div className="h-14 px-4 border-b border-gray-100 flex items-center justify-between shrink-0">
                             <p className="text-sm font-semibold text-gray-600">
                                 รายการชิ้นงาน
                                 <span className="ml-2 text-xs font-normal text-blue-500">{history.length} records</span>
