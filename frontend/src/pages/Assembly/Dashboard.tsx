@@ -73,9 +73,9 @@ const TH_CLS = 'px-4 py-2.5 text-xs font-semibold text-gray-500 border-b border-
 
 // Fixed widths for short codes; M/C NO. takes the rest because its chips wrap.
 const DAILY_COLUMNS = [
-    { label: 'M/C NO.', cls: 'text-left w-150' },
-    { label: 'PART NO.', cls: 'text-left ' },
-    { label: 'WOS', cls: 'text-left w-32' },
+    { label: 'M/C NO.', cls: 'text-left w-150 border-r' },
+    { label: 'PART NO.', cls: 'text-left border-r' },
+    { label: 'WOS', cls: 'text-left w-32 border-r' },
     { label: 'QTY', cls: 'text-right w-28' },
 ];
 
@@ -380,7 +380,7 @@ const Dashboard = () => {
                                                     <td className="px-4 py-2.5 text-sm font-semibold text-gray-700 whitespace-nowrap align-top border-r border-gray-200">
                                                         {li === 0 ? p.part_no : ''}
                                                     </td>
-                                                    <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap">{l.wos}</td>
+                                                    <td className="px-4 py-2.5 text-sm font-mono text-gray-500 whitespace-nowrap border-r border-gray-200">{l.wos}</td>
                                                     <td className="px-4 py-2.5 text-sm font-bold text-gray-800 text-right tabular-nums">{l.qty.toLocaleString()}</td>
                                                 </tr>
                                             ))}
@@ -389,7 +389,7 @@ const Dashboard = () => {
                                     {dailyParts.length > 0 && (
                                         <tfoot className="sticky bottom-0 bg-white border-t-2 border-gray-200">
                                             <tr>
-                                                <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-600 uppercase tracking-wider">TOTAL :</td>
+                                                <td colSpan={3} className="px-4 py-3 text-sm font-bold text-gray-600 uppercase tracking-wider border-r border-gray-200">TOTAL :</td>
                                                 <td className="px-4 py-3 text-base font-bold text-slate-900 text-right tabular-nums">{dailyTotalQty.toLocaleString()}</td>
                                             </tr>
                                         </tfoot>
