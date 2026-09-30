@@ -1,11 +1,19 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { backendApi } from '../../config/instance';
 import Swal from 'sweetalert2';
+import type { SweetAlertIcon } from 'sweetalert2';
 import LoginModal from '../../components/LoginModal';
+import type { As400Lot, RegisterTagRequest, RegisterTagResult } from '../../types/api';
 
-const showAlert = (msg, type) => {
-    Swal.fire({
+interface RegisteredRow {
+    lot_no: string;
+    tag_id: string;
+    time: string;
+}
+
+const showAlert = (msg: string, type: SweetAlertIcon) => {
+    void Swal.fire({
         position: 'center',
         icon: type,
         title: msg,
@@ -18,15 +26,15 @@ const RegisterSingle = () => {
      const navigate = useNavigate();
     // const [user, setUser] = useState(null);
     const [lotNo, setLotNo] = useState('');
-    const [lotInfo, setLotInfo] = useState(null);
+    const [lotInfo, setLotInfo] = useState<As400Lot | null>(null);
     const [tagId, setTagId] = useState('');
     const [loading, setLoading] = useState(false);
-    const [history, setHistory] = useState([]);
+    const [history, setHistory] = useState<RegisteredRow[]>([]);
 
-    const lotRef = useRef(null);
-    const tagRef = useRef(null);
-    const lotTimer = useRef(null);
-    const tagTimer = useRef(null);
+    const lotRef = useRef<HTMLInputElement>(null);
+    const tagRef = useRef<HTMLInputElement>(null);
+    const lotTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+    const tagTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     // focus lot เสมอถ้ายังไม่มี lotInfo
     useEffect(() => {
@@ -55,20 +63,20 @@ const RegisterSingle = () => {
     // }
 
     // สแกน lot — timer 300ms
-    const handleLotChange = (e) => {
+    const handleLotChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.toUpperCase();
         setLotNo(val);
-        clearTimeout(lotTimer.current);
+        if (lotTimer.current) clearTimeout(lotTimer.current);
         lotTimer.current = setTimeout(() => {
             const target = val.trim();
-            if (target) fetchLot(target);
+            if (target) void fetchLot(target);
         }, 300);
     };
 
-    const fetchLot = async (target) => {
+    const fetchLot = async (target: string) => {
         setLoading(true);
         try {
-            const res = await backendApi.get(`/lot/${target}`);
+            const res = await backendApi.get<As400Lot>(`/lot/${target}`);
             setLotInfo(res.data);
             setLotNo('');
         } catch {
@@ -81,22 +89,22 @@ const RegisterSingle = () => {
     };
 
     // สแกน tag — timer 300ms
-    const handleTagChange = (e) => {
+    const handleTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.toUpperCase();
         setTagId(val);
-        clearTimeout(tagTimer.current);
+        if (tagTimer.current) clearTimeout(tagTimer.current);
         tagTimer.current = setTimeout(() => {
             const tag = val.trim();
-            if (tag) registerTag(tag);
+            if (tag) void registerTag(tag);
         }, 300);
     };
 
-    const isValidTag = (tag) => {
+    const isValidTag = (tag: string) => {
         // เช็คว่าเป็น alphanumeric เท่านั้น
         return /^[A-Z0-9]+$/.test(tag);
     };
 
-    const handleTagKeyDown = (e) => {
+    const handleTagKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key !== 'Enter') return;
         const tag = tagId.trim();
         if (!tag) return;
@@ -107,22 +115,22 @@ const RegisterSingle = () => {
             return;
         }
 
-        registerTag(tag);
+        void registerTag(tag);
     };
 
 
-    const registerTag = async (tag) => {
+    const registerTag = async (tag: string) => {
         if (!lotInfo || loading) return;
         setLoading(true);
         try {
-            const res = await backendApi.post('/register-tag', {
+            const res = await backendApi.post<RegisterTagResult>('/register-tag', {
                 tag_id: tag,
                 lot_no: lotInfo.lot_no,
                 wos: lotInfo.wos,
                 brg_type: lotInfo.brg_type,
                 spec: lotInfo.spec,
                 qty: lotInfo.qty,
-            });
+            } satisfies RegisterTagRequest);
 
             const result = res.data.result;
             if (result === 'OK') {
