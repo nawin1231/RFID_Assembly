@@ -1,21 +1,22 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { backendApi } from '../../config/instance';
 import Swal from 'sweetalert2';
+import type { AdminResult, ReaderConfig as ReaderConfigRow, ReaderStatus, ReaderType, ReadersStatusResponse } from '../../types/api';
 
 const ReaderConfig = () => {
-    const [readers, setReaders] = useState([]);
+    const [readers, setReaders] = useState<ReaderConfigRow[]>([]);
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState([]);
+    const [status, setStatus] = useState<ReaderStatus[]>([]);
 
     useEffect(() => {
-        fetchConfig();
-        fetchStatus();
-        const interval = setInterval(fetchStatus, 5000);
+        void fetchConfig();
+        void fetchStatus();
+        const interval = setInterval(() => void fetchStatus(), 5000);
         return () => clearInterval(interval);
     }, []);
     const fetchConfig = async () => {
         try {
-            const res = await backendApi.get('/readers-config');
+            const res = await backendApi.get<ReaderConfigRow[]>('/readers-config');
             setReaders(res.data);
         } catch {
             Swal.fire({ icon: 'error', title: 'ไม่สามารถโหลดหน้านี้ได้', timer: 1500, showConfirmButton: false });
@@ -24,14 +25,14 @@ const ReaderConfig = () => {
 
     const fetchStatus = async () => {
         try {
-            const res = await backendApi.get('/readers-status');
+            const res = await backendApi.get<ReadersStatusResponse>('/readers-status');
             setStatus(res.data.readers || []);
         } catch (err) {
             console.error('fetchStatus failed', err);
         }
     };
 
-    const handleChange = (index, field, value) => {
+    const handleChange = <K extends keyof ReaderConfigRow>(index: number, field: K, value: ReaderConfigRow[K]) => {
         setReaders(prev => prev.map((r, i) =>
             i === index ? { ...r, [field]: value } : r
         ));
@@ -40,8 +41,8 @@ const ReaderConfig = () => {
     const handleSave = async () => {
         setLoading(true);
         try {
-            await backendApi.put('/readers-config', readers);
-            await backendApi.post('/readers-restart');
+            await backendApi.put<AdminResult>('/readers-config', readers);
+            await backendApi.post<AdminResult>('/readers-restart');
             Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ!', timer: 1500, showConfirmButton: false });
         } catch {
             Swal.fire({ icon: 'error', title: 'ไม่สามารถบันทึกได้!', timer: 1500, showConfirmButton: false });
@@ -60,7 +61,7 @@ const ReaderConfig = () => {
         }]);
     };
 
-    const handleRemove = (index) => {
+    const handleRemove = (index: number) => {
         Swal.fire({
             title: 'ต้องการลบ Reader นี้?',
             icon: 'warning',
@@ -74,7 +75,7 @@ const ReaderConfig = () => {
         });
     };
 
-    const isConnected = (reader) => {
+    const isConnected = (reader: ReaderConfigRow) => {
         return status.find(s => s.type === reader.type)?.connected || false;
     }
 
@@ -146,7 +147,7 @@ const ReaderConfig = () => {
                                     <td className="px-4 py-3">
                                         <select
                                             value={r.type}
-                                            onChange={(e) => handleChange(i, 'type', e.target.value)}
+                                            onChange={(e) => handleChange(i, 'type', e.target.value as ReaderType)}
                                             className="h-9 px-2 text-sm border border-gray-200 rounded-lg bg-white focus:outline-none focus:ring-1 focus:ring-blue-400"
                                         >
                                             <option value="gr_f1">Gauging Room F1</option>

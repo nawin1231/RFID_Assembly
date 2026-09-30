@@ -1,16 +1,18 @@
 import { lotRoutes } from './lots';
 import { createTestDb, callRoute } from '../testUtils';
+import type { MockDb, Route } from '../types';
 
-let db;
-let routes;
+let db: MockDb;
+let routes: Route[];
 beforeEach(() => {
     db = createTestDb();
     routes = lotRoutes(db);
 });
 
-const lotAt = (statusId) => db.lots.find((l) => l.status_id === statusId);
-const unregistered = () => db.as400Lots.find((a) => !db.lots.some((l) => l.lot_no === a.lot_no));
-const post = (path, body) => callRoute(routes, 'POST', path, { body });
+// The fixtures always have a lot at every status and some unregistered AS400 lots.
+const lotAt = (statusId: number) => db.lots.find((l) => l.status_id === statusId)!;
+const unregistered = () => db.as400Lots.find((a) => !db.lots.some((l) => l.lot_no === a.lot_no))!;
+const post = (path: string, body: unknown) => callRoute<{ result: string }>(routes, 'POST', path, { body });
 
 describe('lookups', () => {
     test('GET /lot/:lot_no returns the AS400 record', async () => {

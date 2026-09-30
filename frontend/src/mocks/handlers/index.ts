@@ -5,11 +5,10 @@ import { clearTagRoutes } from './clearTag';
 import { adminRoutes } from './admin';
 import type { MockDb, Route } from '../types';
 
-// Temporary: lots.js and dashboard.js are still JS (infer method: string). Remove both casts in Task 8.
 export const createRoutes = (db: MockDb): Route[] => [
     ...authRoutes(db),
-    ...(lotRoutes(db) as Route[]),
-    ...(dashboardRoutes(db) as Route[]),
+    ...lotRoutes(db),
+    ...dashboardRoutes(db),
     ...clearTagRoutes(db),
     ...adminRoutes(db),
 ];

@@ -1,35 +1,44 @@
+import type { HandlerInput, HandlerResult, LotRow, MockDb, Route } from '../types';
+import type {
+    ActiveLot, As400Lot, CompletedRequest, CompletedResult, ErrorResponse, RegisterTagRequest, RegisterTagResult,
+    ScanRequest, ScanResult,
+} from '../../types/api';
+
 const BEFORE_ISSUE = 1;
 const GAUGING_ROOM_F1 = 2;
 const MC_GAUGING_F1 = 3;
 const COMPLETED = 4;
 
-const result = (code) => ({ data: { result: code } });
-const notFound = (error) => ({ status: 404, data: { error } });
+// Structural return type on purpose: ResultResponse<'OK'> is not assignable to ResultResponse<'X'>
+// (TS compares the type argument, not the shape).
+const result = <C extends string>(code: 'OK' | C): HandlerResult<{ result: 'OK' | C }> => ({ data: { result: code } });
+const notFound = (error: string): HandlerResult<ErrorResponse> => ({ status: 404, data: { error } });
 
-const isActive = (lot) => lot.status_id !== COMPLETED;
+const isActive = (lot: LotRow): boolean => lot.status_id !== COMPLETED;
 
-const lotView = ({ lot_no, wos, qty, tag_id, status_id, brg_type, spec }) =>
+const lotView = ({ lot_no, wos, qty, tag_id, status_id, brg_type, spec }: LotRow): ActiveLot =>
     ({ lot_no, wos, qty, tag_id, status_id, brg_type, spec });
 
 // A tag can belong to several lots over time; the active one wins.
-const findByTag = (db, tagId) =>
+const findByTag = (db: MockDb, tagId: string): LotRow | undefined =>
     db.lots.find((l) => l.tag_id === tagId && isActive(l))
     ?? db.lots.find((l) => l.tag_id === tagId);
 
 // Mirrors Stored_tb_assy_gauging_room_f1 / _mc_gauging_f1: one step forward only.
-const advance = (db, fromStatus, toStatus) => ({ body }) => {
-    const lot = findByTag(db, body.tag_id);
-    if (!lot) return result('TAG_NOT_FOUND');
-    if (lot.status_id !== fromStatus) return result('INVALID_PROCESS');
-    Object.assign(lot, { status_id: toStatus, location_name: body.location_name ?? null, updated_at: db.now() });
-    return result('OK');
-};
+const advance = (db: MockDb, fromStatus: number, toStatus: number) =>
+    ({ body }: HandlerInput<ScanRequest>): HandlerResult<ScanResult> => {
+        const lot = findByTag(db, body.tag_id);
+        if (!lot) return result('TAG_NOT_FOUND');
+        if (lot.status_id !== fromStatus) return result('INVALID_PROCESS');
+        Object.assign(lot, { status_id: toStatus, location_name: body.location_name ?? null, updated_at: db.now() });
+        return result('OK');
+    };
 
-export const lotRoutes = (db) => [
+export const lotRoutes = (db: MockDb): Route[] => [
     {
         method: 'GET',
         path: '/lot/:lot_no',
-        handler: ({ params }) => {
+        handler: ({ params }: HandlerInput): HandlerResult<As400Lot | ErrorResponse> => {
             const lot = db.as400Lots.find((a) => a.lot_no === params.lot_no);
             return lot ? { data: { ...lot } } : notFound('LOT_NOT_FOUND');
         },
@@ -37,7 +46,7 @@ export const lotRoutes = (db) => [
     {
         method: 'GET',
         path: '/lot-by-lot/:lot_no',
-        handler: ({ params }) => {
+        handler: ({ params }: HandlerInput): HandlerResult<ActiveLot | ErrorResponse> => {
             const lot = db.lots.find((l) => l.lot_no === params.lot_no && isActive(l));
             return lot ? { data: lotView(lot) } : notFound('LOT_NOT_FOUND');
         },
@@ -45,7 +54,7 @@ export const lotRoutes = (db) => [
     {
         method: 'GET',
         path: '/lot-by-tag/:tag_id',
-        handler: ({ params }) => {
+        handler: ({ params }: HandlerInput): HandlerResult<ActiveLot | ErrorResponse> => {
             const lot = db.lots.find((l) => l.tag_id === params.tag_id && isActive(l));
             return lot ? { data: lotView(lot) } : notFound('TAG_NOT_FOUND');
         },
@@ -53,7 +62,7 @@ export const lotRoutes = (db) => [
     {
         method: 'POST',
         path: '/register-tag',
-        handler: ({ body }) => {
+        handler: ({ body }: HandlerInput<RegisterTagRequest>): HandlerResult<RegisterTagResult> => {
             const { tag_id, lot_no, wos, brg_type, spec, qty, location_name } = body;
             if (db.lots.some((l) => l.lot_no === lot_no)) return result('LOT_ALREADY_EXISTS');
             if (db.lots.some((l) => l.tag_id === tag_id && isActive(l))) return result('TAG_IN_USE');
@@ -73,7 +82,7 @@ export const lotRoutes = (db) => [
     {
         method: 'POST',
         path: '/completed',
-        handler: ({ body }) => {
+        handler: ({ body }: HandlerInput<CompletedRequest>): HandlerResult<CompletedResult> => {
             const lot = db.lots.find((l) => l.lot_no === body.lot_no);
             if (!lot) return result('LOT_NOT_FOUND');
             if (lot.status_id !== MC_GAUGING_F1) return result('INVALID_PROCESS');
