@@ -85,6 +85,13 @@ describe('GET /dashboard/daily-inventory', () => {
         expect(rows.length).toBeGreaterThan(0);
         rows.forEach((r) => expect(Object.keys(r).sort()).toEqual(['mc_no', 'part_no', 'qty', 'wos']));
     });
+
+    test('every WOS and part pair also exists in the lots', async () => {
+        const rows = await get<DailyInventoryRow[]>('/dashboard/daily-inventory');
+        rows.forEach((r) => {
+            expect(db.lots.some((l) => l.wos === r.wos && l.brg_type === r.part_no)).toBe(true);
+        });
+    });
 });
 
 describe('GET /dashboard/history', () => {
