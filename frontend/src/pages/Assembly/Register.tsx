@@ -1,9 +1,15 @@
-import React, { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { backendApi } from '../../config/instance'
 import Swal from 'sweetalert2';
+import type { SweetAlertIcon } from 'sweetalert2';
+import type { As400Lot, RegisterTagRequest, RegisterTagResult } from '../../types/api';
 
-const showAlert = (msg, type) => {
-  Swal.fire({
+interface RegisterRow extends As400Lot {
+  tag_done: boolean;
+}
+
+const showAlert = (msg: string, type: SweetAlertIcon) => {
+  void Swal.fire({
     position: 'center',
     icon: type,
     title: msg,
@@ -14,15 +20,15 @@ const showAlert = (msg, type) => {
 
 const Register = () => {
   const [lotNo, setLotNo] = useState('');
-  const [lots, setLots] = useState([]);
+  const [lots, setLots] = useState<RegisterRow[]>([]);
   const [started, setStarted] = useState(false);
-  const [activeLot, setActiveLot] = useState(null);
+  const [activeLot, setActiveLot] = useState<string | null>(null);
   const [tagId, setTagId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const lotRef = useRef(null);
-  const tagRef = useRef(null);
-  const timerRef = useRef(null);
+  const lotRef = useRef<HTMLInputElement>(null);
+  const tagRef = useRef<HTMLInputElement>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // focus lot input ถ้ายังไม่ start
   useEffect(() => {
@@ -34,7 +40,7 @@ const Register = () => {
   }, [started, loading]);
 
   // สแกน lot barcode กด Enter
-  const handleLot = async (e) => {
+  const handleLot = async (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
     const target = lotNo.trim();
     if (!target) return;
@@ -47,7 +53,7 @@ const Register = () => {
 
     setLoading(true);
     try {
-      const res = await backendApi.get(`/lot/${target}`);
+      const res = await backendApi.get<As400Lot>(`/lot/${target}`);
       setLots(prev => [...prev, { ...res.data, tag_done: false }]);
       showAlert('Lot added!', 'success');
     } catch {
@@ -59,29 +65,28 @@ const Register = () => {
   };
 
   // สแกน tag กด Enter
-  const handleTag = (e) => {
+  const handleTag = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key !== 'Enter') return;
-    const tag = e.target.value.trim();
+    const tag = e.currentTarget.value.trim();
     if (!tag) return;
     setTagId(tag);
   };
 
-  const handleTagChange = (e) => {
+  const handleTagChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value.toUpperCase();
     setTagId(val);
-    clearTimeout(timerRef.current);
+    if (timerRef.current) clearTimeout(timerRef.current);
     timerRef.current = setTimeout(() => {
       const tag = val.trim();
-      if (tag) registerTag(tag, activeLot);
+      if (tag) void registerTag(tag, activeLot);
     }, 300);
   };
 
-  const registerTag = async (tag, lotNo) => {
+  const registerTag = async (tag: string, lotNo: string | null) => {
     try {
-      const res = await backendApi.post('/register-tag', {
-        tag_id: tag,
-        lot_no: lotNo,
-      });
+      // TODO(ts-bug-4): body lacks wos, brg_type, spec and qty, which RegisterTagRequest requires (RegisterSingle sends them). Cast keeps the old body.
+      const body = { tag_id: tag, lot_no: lotNo } as RegisterTagRequest;
+      const res = await backendApi.post<RegisterTagResult>('/register-tag', body);
 
       const result = res.data.result;
       if (result === 'OK') {
@@ -108,7 +113,7 @@ const Register = () => {
         showAlert(result, 'error');
       }
     } catch (err) {
-      showAlert(err.message, 'error');
+      showAlert(err instanceof Error ? err.message : String(err), 'error');
     } finally {
       setTagId('');
     }
@@ -133,7 +138,7 @@ const Register = () => {
     setTagId('');
   };
 
-  const removeLot = (lot_no) => {
+  const removeLot = (lot_no: string) => {
     setLots(prev => prev.filter(l => l.lot_no !== lot_no));
     if (activeLot === lot_no) setActiveLot(null);
   };
