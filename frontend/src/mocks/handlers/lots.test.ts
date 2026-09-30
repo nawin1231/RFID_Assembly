@@ -121,7 +121,8 @@ describe('POST /completed', () => {
         expect(lot.machine_no).toBe('MC-07');
     });
 
-    test('rejects a lot not yet at MC Gauging F1', async () => {
+    test('rejects a lot in a process without can_clear_tag', async () => {
+        db.processes.find((p) => p.id === 1)!.can_clear_tag = false;
         expect((await post('/completed', { lot_no: lotAt(1).lot_no })).data.result).toBe('INVALID_PROCESS');
     });
 

@@ -48,6 +48,7 @@ const ClearTag = () => {
     const [tagInfo, setTagInfo]   = useState<ActiveLot | null>(null);
     const [statuses, setStatuses]   = useState<Status[]>([]);
     const [processes, setProcesses] = useState<Process[]>([]);
+    const [processId, setProcessId] = useState('');
     const [remark, setRemark]     = useState('');
     const [empId, setEmpId]       = useState('');
     const [loading, setLoading]   = useState(false);
@@ -67,8 +68,12 @@ const ClearTag = () => {
     const lotProcess = processes.find(p => p.id === lotStatus?.process_id);
     const canClearLot = !!lotProcess?.can_clear_tag;
     const clearableProcesses = processes.filter(p => p.can_clear_tag);
+    const chosenProcess = clearableProcesses.find(p => String(p.id) === processId);
+    const defaultProcessId = canClearLot ? String(lotProcess?.id) : '';
 
     useEffect(() => { void fetchMaster(); }, []);
+    // Pre-fill the selector from the scanned lot. The user may change it afterwards.
+    useEffect(() => { setProcessId(defaultProcessId); }, [defaultProcessId]);
     useEffect(() => {
         if (activeTab === 'history') void fetchHistory();
     }, [activeTab]);
@@ -126,10 +131,11 @@ const ClearTag = () => {
         if (!lotInfo)      return showAlert('กรุณากรอก Lot No.', 'warning');
         if (!tagInfo)      return showAlert('กรุณากรอก Tag ID', 'warning');
         if (!isMatch)      return showAlert('Lot และ Tag ไม่ตรงกัน', 'error');
-        if (!lotProcess || !canClearLot) return showAlert('Process นี้ Clear Tag ไม่ได้', 'error');
+        if (!canClearLot) return showAlert('Process นี้ Clear Tag ไม่ได้', 'error');
+        if (!chosenProcess) return showAlert('กรุณาเลือก Process', 'warning');
         if (!empId.trim()) return showAlert('กรุณากรอกรหัสพนักงาน', 'warning');
 
-        const processName = lotProcess.process_name;
+        const processName = chosenProcess.process_name;
         const confirm = await Swal.fire({
             title: `Clear tag ของ ${lotInfo.lot_no}?`,
             html: `Process: <b>${processName}</b><br/>Emp: <b>${empId}</b>`,
@@ -163,7 +169,7 @@ const ClearTag = () => {
     const handleReset = () => {
         setLotInput(''); setTagInput('');
         setLotInfo(null); setTagInfo(null);
-        setRemark(''); setEmpId('');
+        setProcessId(''); setRemark(''); setEmpId('');
     };
 
     const fetchHistory = async (f: ClearTagHistoryQuery = historyFilter) => {
@@ -336,9 +342,9 @@ const ClearTag = () => {
                                     Process <span className="text-orange-400 normal-case">*</span>
                                 </p>
                                 {/* TODO: need to discuss with user again: clear tag by process or location */}
-                                <select value={canClearLot ? String(lotProcess?.id) : ''} disabled
+                                <select value={processId} onChange={e => setProcessId(e.target.value)} disabled={!lotInfo}
                                     className="w-full h-10 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-emerald-400 disabled:opacity-60">
-                                    <option value="">{lotInfo ? '-- Clear ไม่ได้ --' : '-- สแกน Lot ก่อน --'}</option>
+                                    <option value="">{lotInfo ? '-- เลือก Process --' : '-- สแกน Lot ก่อน --'}</option>
                                     {clearableProcesses.map(p => (
                                         <option key={p.id} value={p.id}>{p.process_name}</option>
                                     ))}
@@ -371,7 +377,7 @@ const ClearTag = () => {
                     {/* BUTTONS */}
                     <div className="flex gap-2 shrink-0">
                         <button onClick={handleClear}
-                            disabled={!lotInfo || !tagInfo || !isMatch || !canClearLot || loading}
+                            disabled={!lotInfo || !tagInfo || !isMatch || !canClearLot || !chosenProcess || loading}
                             className="flex-1 h-11 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors disabled:opacity-30">
                             {loading ? 'กำลัง Clear...' : 'Clear Tag'}
                         </button>
