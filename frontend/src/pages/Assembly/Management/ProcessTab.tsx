@@ -1,61 +1,62 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { backendApi } from '../../../config/instance';
 import Swal from 'sweetalert2';
+import type { AdminResult, Process, ProcessRequest } from '../../../types/api';
 
-const defaultForm = { process_code: '', process_name: '' };
+const defaultForm: ProcessRequest = { process_code: '', process_name: '' };
 
 const ProcessTab = () => {
-    const [processes, setProcesses] = useState([]);
+    const [processes, setProcesses] = useState<Process[]>([]);
     const [form, setForm]           = useState(defaultForm);
-    const [editId, setEditId]       = useState(null);
+    const [editId, setEditId]       = useState<number | null>(null);
 
     const fetchProcesses = async () => {
         try {
-            const res = await backendApi.get('/process');
+            const res = await backendApi.get<Process[]>('/process');
             setProcesses(res.data);
         } catch {
-            Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
+            void Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
         }
     };
 
-    useEffect(() => { fetchProcesses(); }, []);
+    useEffect(() => { void fetchProcesses(); }, []);
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async () => {
         if (!form.process_code || !form.process_name)
             return Swal.fire({ icon: 'warning', title: 'กรอกข้อมูลให้ครบ', showConfirmButton: false, timer: 1500 });
         try {
             if (editId) {
-                await backendApi.put(`/process/${editId}`, form);
+                await backendApi.put<AdminResult>(`/process/${editId}`, form);
             } else {
-                await backendApi.post('/process', form);
+                await backendApi.post<AdminResult>('/process', form);
             }
             setForm(defaultForm);
             setEditId(null);
-            fetchProcesses();
-            Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
+            void fetchProcesses();
+            void Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
         } catch {
-            Swal.fire('Error', 'บันทึกไม่ได้', 'error');
+            void Swal.fire('Error', 'บันทึกไม่ได้', 'error');
         }
     };
 
-    const handleEdit = (p) => {
+    const handleEdit = (p: Process) => {
         setEditId(p.id);
         setForm({ process_code: p.process_code, process_name: p.process_name });
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         const confirm = await Swal.fire({
             title: 'ลบ process นี้?', icon: 'warning',
             showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก'
         });
         if (!confirm.isConfirmed) return;
         try {
-            await backendApi.delete(`/process/${id}`);
-            fetchProcesses();
+            await backendApi.delete<AdminResult>(`/process/${id}`);
+            void fetchProcesses();
         } catch {
-            Swal.fire('Error', 'ลบไม่ได้', 'error');
+            void Swal.fire('Error', 'ลบไม่ได้', 'error');
         }
     };
 

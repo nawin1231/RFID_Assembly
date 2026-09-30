@@ -9,8 +9,24 @@ import {
     DownloadOutlined,
     FileExcelOutlined,
 } from '@ant-design/icons';
+import type {
+    DashboardFilter,
+    DashboardResponse,
+    DashboardSummary,
+    HistoryRow,
+    LocationRow,
+    ProcessSummaryRow,
+} from '../../types/api';
 
-const STATUS_BADGE = {
+type Tab = 'summary' | 'detail';
+
+interface PaginationProps {
+    page: number;
+    totalPages: number;
+    setPage: React.Dispatch<React.SetStateAction<number>>;
+}
+
+const STATUS_BADGE: Record<number, { label: string; bg: string; text: string; border: string }> = {
     1: { label: 'BEFORE ISSUE', bg: 'bg-amber-50', text: 'text-amber-600', border: 'border-amber-200' },
     2: { label: 'GAUGING ROOM F1', bg: 'bg-green-50', text: 'text-green-600', border: 'border-green-200' },
     3: { label: 'MC GAUGING F1', bg: 'bg-blue-50', text: 'text-blue-600', border: 'border-blue-200' },
@@ -24,30 +40,47 @@ const STATUS_OPTIONS = [
     { id: '3', label: 'MC Gauging F1' },
 ];
 
-const TABS = [
+const TABS: { key: Tab; label: string }[] = [
     { key: 'summary', label: 'Summary' },
     { key: 'detail', label: 'Detail' },
 ];
 
+const CARDS: { key: keyof DashboardSummary; label: string; color: string; bg: string; border: string; icon: React.ReactNode }[] = [
+    { key: 'total_qty', label: 'TOTAL QTY', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <DashboardOutlined className="text-amber-400" /> },
+    { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-slate-600', bg: 'bg-white', border: 'border-gray-200', icon: <ScanOutlined className="text-slate-400" /> },
+    { key: 'gr_f1', label: 'GAUGING ROOM F1', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <ToolOutlined className="text-green-400" /> },
+    { key: 'mc_f1', label: 'MC GAUGING F1', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <ToolOutlined className="text-blue-400" /> },
+];
+
+const DATE_FIELDS: { name: keyof DashboardFilter; label: string; type: string }[] = [
+    { name: 'date_from', label: 'Date From', type: 'date' },
+    { name: 'date_to', label: 'Date To', type: 'date' },
+];
+
+const TEXT_FIELDS: { name: keyof DashboardFilter; label: string; placeholder: string }[] = [
+    { name: 'wos', label: 'W.O.S.', placeholder: 'W.O.S.' },
+    { name: 'lot_no', label: 'Lot No.', placeholder: 'Lot No.' },
+];
+
 const today = () => new Date().toISOString().slice(0, 10);
-const defaultFilter = { date_from: today(), date_to: today(), brg_type: '', wos: '', lot_no: '', status_id: '', location_name: '' };
+const defaultFilter: Required<DashboardFilter> = { date_from: today(), date_to: today(), brg_type: '', wos: '', lot_no: '', status_id: '', location_name: '' };
 const PAGE_SIZE = 20;
 
 const Dashboard = () => {
-    const [activeTab, setActiveTab] = useState('summary');
-    const [lastRefresh, setLastRefresh] = useState(null);
-    const [summary, setSummary] = useState(null);
-    const [processSummary, setProcessSummary] = useState([]);
-    const [history, setHistory] = useState([]);
-    const [locations, setLocations] = useState([]);
+    const [activeTab, setActiveTab] = useState<Tab>('summary');
+    const [lastRefresh, setLastRefresh] = useState<Date | null>(null);
+    const [summary, setSummary] = useState<DashboardSummary | null>(null);
+    const [processSummary, setProcessSummary] = useState<ProcessSummaryRow[]>([]);
+    const [history, setHistory] = useState<HistoryRow[]>([]);
+    const [locations, setLocations] = useState<LocationRow[]>([]);
     const [filter, setFilter] = useState(defaultFilter);
     const [pageH, setPageH] = useState(1);
     const [loading, setLoading] = useState(false);
     const [partInput, setPartInput] = useState('');
-    const [partDropdown, setPartDropdown] = useState([]);
+    const [partDropdown, setPartDropdown] = useState<string[]>([]);
     const [showDropdown, setShowDropdown] = useState(false);
-    const intervalRef = useRef(null);
-    const dropdownRef = useRef(null);
+    const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const dropdownRef = useRef<HTMLDivElement>(null);
 
     const totalPagesH = Math.ceil(history.length / PAGE_SIZE);
     const pagedHistory = history.slice((pageH - 1) * PAGE_SIZE, pageH * PAGE_SIZE);
@@ -60,8 +93,8 @@ const Dashboard = () => {
     const fetchSummary = async () => {
         try {
             const [resMain, resProcess] = await Promise.all([
-                backendApi.get('/dashboard'),
-                backendApi.get('/dashboard/process-summary'),
+                backendApi.get<DashboardResponse>('/dashboard'),
+                backendApi.get<ProcessSummaryRow[]>('/dashboard/process-summary'),
             ]);
             setLastRefresh(new Date());
             setSummary(resMain.data.summary);
@@ -71,11 +104,11 @@ const Dashboard = () => {
         }
     };
 
-    const fetchHistory = async (f = filter) => {
+    const fetchHistory = async (f: DashboardFilter = filter) => {
         setLoading(true);
         try {
             const params = Object.fromEntries(Object.entries(f).filter(([, v]) => v !== ''));
-            const res = await backendApi.get('/dashboard/history', { params });
+            const res = await backendApi.get<HistoryRow[]>('/dashboard/history', { params });
             setHistory(res.data);
             setPageH(1);
         } catch (err) {
@@ -87,7 +120,7 @@ const Dashboard = () => {
 
     const fetchLocations = async () => {
         try {
-            const res = await backendApi.get('/dashboard/locations');
+            const res = await backendApi.get<LocationRow[]>('/dashboard/locations');
             setLocations(res.data);
         } catch (err) {
             console.error(err);
@@ -95,20 +128,21 @@ const Dashboard = () => {
     };
 
     useEffect(() => {
-        fetchSummary();
-        fetchLocations();
-        intervalRef.current = setInterval(() => fetchSummary(), 3 * 60 * 1000);
-        return () => clearInterval(intervalRef.current);
+        void fetchSummary();
+        void fetchLocations();
+        intervalRef.current = setInterval(() => void fetchSummary(), 3 * 60 * 1000);
+        return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
     }, []);
 
     useEffect(() => {
-        if (activeTab === 'detail') fetchHistory();
+        if (activeTab === 'detail') void fetchHistory();
     }, [activeTab]);
 
     // ปิด dropdown เมื่อคลิกข้างนอก
     useEffect(() => {
-        const handleClick = (e) => {
-            if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        const handleClick = (e: MouseEvent) => {
+            // a mousedown listener on document always gets a Node as target
+            if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
                 setShowDropdown(false);
             }
         };
@@ -118,15 +152,16 @@ const Dashboard = () => {
 
     // ===== HANDLERS =====
 
-    const handleChange = (e) => setFilter({ ...filter, [e.target.name]: e.target.value });
-    const handleSearch = () => { setPageH(1); fetchHistory(filter); };
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
+        setFilter({ ...filter, [e.target.name]: e.target.value });
+    const handleSearch = () => { setPageH(1); void fetchHistory(filter); };
     const handleReset = () => {
         setFilter(defaultFilter);
         setPartInput('');
-        fetchHistory(defaultFilter);
+        void fetchHistory(defaultFilter);
     };
 
-    const handlePartInput = (e) => {
+    const handlePartInput = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value.toUpperCase();
         setPartInput(val);
         setFilter({ ...filter, brg_type: val });
@@ -139,7 +174,7 @@ const Dashboard = () => {
         }
     };
 
-    const handleSelectPart = (part) => {
+    const handleSelectPart = (part: string) => {
         setPartInput(part);
         setFilter({ ...filter, brg_type: part });
         setShowDropdown(false);
@@ -182,7 +217,7 @@ const Dashboard = () => {
 
     const inputCls = "h-9 px-3 text-sm border border-gray-200 rounded-lg bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-400";
 
-    const Pagination = ({ page, totalPages, setPage }) => totalPages <= 1 ? null : (
+    const Pagination = ({ page, totalPages, setPage }: PaginationProps) => totalPages <= 1 ? null : (
         <div className="px-4 py-2.5 border-t border-gray-100 flex items-center justify-between shrink-0">
             <p className="text-xs text-gray-400">Page {page} of {totalPages}</p>
             <div className="flex gap-1">
@@ -226,7 +261,7 @@ const Dashboard = () => {
                             Updated {lastRefresh.toLocaleTimeString('th-TH')}
                         </p>
                     )}
-                    <button onClick={fetchSummary}
+                    <button onClick={() => void fetchSummary()}
                         className="h-7 w-7 flex items-center justify-center text-gray-400 hover:text-blue-500 hover:bg-blue-50 rounded-lg transition-colors">
                         <ReloadOutlined />
                     </button>
@@ -239,12 +274,7 @@ const Dashboard = () => {
 
                     {/* Cards */}
                     <div className="grid grid-cols-4 gap-3 shrink-0">
-                        {[
-                            { key: 'total_qty', label: 'TOTAL QTY', color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-200', icon: <DashboardOutlined className="text-amber-400" /> },
-                            { key: 'bf_issue', label: 'BEFORE ISSUE', color: 'text-slate-600', bg: 'bg-white', border: 'border-gray-200', icon: <ScanOutlined className="text-slate-400" /> },
-                            { key: 'gr_f1', label: 'GAUGING ROOM F1', color: 'text-green-600', bg: 'bg-green-50', border: 'border-green-200', icon: <ToolOutlined className="text-green-400" /> },
-                            { key: 'mc_f1', label: 'MC GAUGING F1', color: 'text-blue-600', bg: 'bg-blue-50', border: 'border-blue-200', icon: <ToolOutlined className="text-blue-400" /> },
-                        ].map(c => (
+                        {CARDS.map(c => (
                             <div key={c.key} className={`${c.bg} border ${c.border} rounded-xl p-4`}>
                                 <div className="flex items-center gap-2 mb-2">
                                     {c.icon}
@@ -335,10 +365,7 @@ const Dashboard = () => {
                     {/* Filter */}
                     <div className="bg-white border border-gray-200 rounded-xl px-4 py-3 shrink-0">
                         <div className="flex items-end gap-2 flex-wrap">
-                            {[
-                                { name: 'date_from', label: 'Date From', type: 'date' },
-                                { name: 'date_to', label: 'Date To', type: 'date' },
-                            ].map(({ name, label, type }) => (
+                            {DATE_FIELDS.map(({ name, label, type }) => (
                                 <div key={name} className="flex flex-col gap-1">
                                     <p className="text-xs text-gray-400 whitespace-nowrap">{label}</p>
                                     <input type={type} name={name} value={filter[name]}
@@ -371,10 +398,7 @@ const Dashboard = () => {
                                 )}
                             </div>
 
-                            {[
-                                { name: 'wos', label: 'W.O.S.', placeholder: 'W.O.S.' },
-                                { name: 'lot_no', label: 'Lot No.', placeholder: 'Lot No.' },
-                            ].map(({ name, label, placeholder }) => (
+                            {TEXT_FIELDS.map(({ name, label, placeholder }) => (
                                 <div key={name} className="flex flex-col gap-1 flex-1 min-w-0">
                                     <p className="text-xs text-gray-400 whitespace-nowrap">{label}</p>
                                     <input type="text" name={name} value={filter[name]}

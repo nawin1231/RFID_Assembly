@@ -1,26 +1,30 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { backendApi } from '../../../config/instance';
 import Swal from 'sweetalert2';
+import type { AdminResult, Status, StatusRequest } from '../../../types/api';
 
-const defaultForm = { status: '', label_status: '' };
+// No process_id: the backend stores null. Keep it that way (plan Task 12).
+type StatusForm = Pick<StatusRequest, 'status' | 'label_status'>;
+
+const defaultForm: StatusForm = { status: '', label_status: '' };
 
 const StatusTab = () => {
-    const [statuses, setStatuses] = useState([]);
+    const [statuses, setStatuses] = useState<Status[]>([]);
     const [form, setForm] = useState(defaultForm);
-    const [editId, setEditId] = useState(null);
+    const [editId, setEditId] = useState<number | null>(null);
 
     const fetchStatuses = async () => {
         try {
-            const res = await backendApi.get('/status');
+            const res = await backendApi.get<Status[]>('/status');
             setStatuses(res.data);
         } catch {
-            Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
+            void Swal.fire('Error', 'โหลดข้อมูลไม่ได้', 'error');
         }
     };
 
-    useEffect(() => { fetchStatuses(); }, []);
+    useEffect(() => { void fetchStatuses(); }, []);
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const handleSubmit = async () => {
         if (!form.status || !form.label_status) {
@@ -28,35 +32,35 @@ const StatusTab = () => {
         }
         try {
             if (editId) {
-                await backendApi.put(`/status/${editId}`, form);
+                await backendApi.put<AdminResult>(`/status/${editId}`, form);
             } else {
-                await backendApi.post('/status', form);
+                await backendApi.post<AdminResult>('/status', form);
             }
             setForm(defaultForm);
             setEditId(null);
-            fetchStatuses();
-            Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
+            void fetchStatuses();
+            void Swal.fire({ icon: 'success', title: editId ? 'แก้ไขแล้ว' : 'เพิ่มแล้ว', showConfirmButton: false, timer: 1500 });
         } catch {
-            Swal.fire('Error', 'บันทึกไม่ได้', 'error');
+            void Swal.fire('Error', 'บันทึกไม่ได้', 'error');
         }
     };
 
-    const handleEdit = (s) => {
+    const handleEdit = (s: Status) => {
         setEditId(s.id);
         setForm({ status: s.status, label_status: s.label_status });
     };
 
-    const handleDelete = async (id) => {
+    const handleDelete = async (id: number) => {
         const confirm = await Swal.fire({
             title: 'ลบ status นี้?', icon: 'warning',
             showCancelButton: true, confirmButtonText: 'ลบ', cancelButtonText: 'ยกเลิก'
         });
         if (!confirm.isConfirmed) return;
         try {
-            await backendApi.delete(`/status/${id}`);
-            fetchStatuses();
+            await backendApi.delete<AdminResult>(`/status/${id}`);
+            void fetchStatuses();
         } catch {
-            Swal.fire('Error', 'ลบไม่ได้', 'error');
+            void Swal.fire('Error', 'ลบไม่ได้', 'error');
         }
     };
 
