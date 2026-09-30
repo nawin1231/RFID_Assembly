@@ -691,5 +691,5 @@ Suggested commit: `build(frontend): replace CRA ESLint config with flat config`.
 
 ## After Phase 1 (not in this plan)
 
-- Phase 2: TypeScript (`allowJs`, upgrade `typescript` 4.9 → 5.x, convert `config/` and `mocks/` first, then pages). Separate plan.
+- Phase 2: TypeScript (completed via `frontend/docs/2026-09-29-jsx-to-tsx.md`, Tasks 1–19).
 - `frontend/docs/2026-09-14-frontend-mock-mode.md` still describes the CRA setup. It is a finished historical plan; leave it as is.
