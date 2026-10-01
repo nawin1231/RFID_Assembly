@@ -7,6 +7,7 @@ app.use(cors());
 app.use(express.json());
 
 //*need to can handle 60+ reader node points in the future
+//TODO: add compression, restyle import to be module style
 
 const assemblyRoutes = require('./routes/assembly');
 app.use('/api/assembly', assemblyRoutes);
