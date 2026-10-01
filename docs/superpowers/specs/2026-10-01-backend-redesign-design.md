@@ -570,7 +570,7 @@ Requests in `bruno/AYT-RFID/`, one per endpoint, grouped by module. Fake data on
 
 ---
 
-## 11. Risks
+## 11. Risks(need to review again last review at 01-10-2026)
 
 | # | Risk | Impact | Mitigation |
 | --- | --- | --- | --- |
