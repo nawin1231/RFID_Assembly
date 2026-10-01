@@ -2,7 +2,7 @@
 
 - Date: 2026-10-01
 - Branch: `ayt-rfid`
-- Status: **Draft v2 — waiting for review**
+- Status: **Draft v3 — waiting for review** (v3: status moved to the lot, `is_terminal` dropped, API log kept)
 - Scope: branches B0–B5 (see section 2). B6 and B7 get their own short specs later.
 
 ---
@@ -52,23 +52,26 @@ All confirmed with you.
 | # | Decision |
 | --- | --- |
 | D1 | Pairing is 1 lot ↔ 1 tag at a time. Tags are reused after the pair closes. |
-| D2 | Status belongs to the **pairing**, not to lot or tag. Every change writes an event row. |
+| D2 | Status belongs to the **lot** (where the lot is). The pairing only says which tag carries the lot, and when. Every status change writes an event row. |
 | D3 | Stage 1 "before register" is virtual. No row in our DB. |
 | D4 | One location belongs to exactly one process. |
 | D5 | Scan rule: **last scan wins**. Going back (4 → 3) is allowed. `seq` is display order only. |
-| D6 | Duplicate read (same location as current status) → no event, only update `last_seen_at`. |
+| D6 | Duplicate read (same location as the lot's current status) → no event, only update `tb_assy_lot.last_seen_at`. |
 | D7 | Auto clear gate = external done API by `lot_no`. Found → clear. No status precondition. |
 | D8 | Clear has two triggers: scheduled job (auto) and Clear Tag page (manual). |
 | D9 | Done API is yes/no. Our event `created_at` is the clear time. |
-| D10 | Lot is a snapshot of AS400 data: one row per `lot_no`. Raw response stays in `tb_assy_api_log`. |
+| D10 | Lot row = AS400 snapshot + our state (status, last seen). One row per `lot_no`. Raw response stays in `tb_assy_api_log`. |
 | D11 | Tag is created on first pair. `is_active` retires a damaged tag. "Free" is derived, not stored. |
 | D12 | A pair closes only one way: **CLEARED**. No `CANCELLED` status. A wrong pair is fixed by manual clear with a remark. |
 | D13 | Re-pair is always allowed when the lot has no active pair. |
 | D14 | Machine no.: live call to machine API + in-memory cache. One WOS → many machines. |
-| D15 | State + log: `pairing.status_id` is the current state. `pairing_event` is append-only. Same transaction. |
+| D15 | State + log: `lot.status_id` is the current state. `pairing_event` is append-only. Same transaction. |
 | D16 | No stored procedures. Layers: route → controller → service → repository. |
 | D17 | Manual clear is a **force** fallback for when auto clear can't finish. It does **not** call the done API. It needs: lot + tag are the active pair (checked in BE), `emp_id`, remark, and the pair's current process has `can_clear_tag = 1`. |
 | D18 | `REGISTERED` maps to location **Before Gauging Room F1** (`bf_gr_f1`, process 1500). So every active status has a location and a process. |
+| D19 | No `is_terminal` flag. `CLEARED` is the only closing status; code finds it by its code. Adding `CANCELLED` later needs a code change anyway (R8). |
+| D20 | Invariant: lot status ≠ `CLEARED` **if and only if** the lot has an active pairing. Only `moveStatus` writes lot status and closes pairings, so both change together. |
+| D21 | `tb_assy_api_log` stays. The lot table keeps only the latest mapped data; the log keeps every call (raw response, HTTP status, error, duration) for all three upstream APIs. |
 | P2 | Table names keep the `tb_assy_` / `tb_master_` prefix. Old tables are already dropped, so the names are free. |
 | P3 | API base stays `/api/assembly` with new resource paths. No `/v2`. |
 | P4 | Feature folders: `modules/<feature>/{routes,controller,service,repository,schemas}.js`. |
@@ -96,15 +99,14 @@ All confirmed with you.
                               |  clear:  auto (job, done API found the lot)
                               |       or manual (web, force, remark required)
                               v
-                      (5) CLEARED (terminal)  -- lot can be paired again (D13)
+                      (5) CLEARED  -- pair closed; lot can be paired again (D13)
 ```
 
 - Active pair = `closed_at IS NULL`.
 - Clear works from any active status (2, 3 or 4). Manual clear also needs `can_clear_tag` on that status's process.
 - After a pair closes, the tag is free. A read of that tag becomes an "unknown read".
 - The lot's displayed stage:
-  - Has active pair → that pair's status.
-  - No active pair → `CLEARED` (its latest pair).
+  - Lot row exists → `tb_assy_lot.status_id`.
   - Not in our DB → stage 1 (virtual).
 
 ---
@@ -119,7 +121,7 @@ erDiagram
     tb_master_location ||--o| tb_master_assy_status : "maps to (0..1)"
     tb_assy_lot ||--o{ tb_assy_pairing : has
     tb_assy_tag ||--o{ tb_assy_pairing : has
-    tb_master_assy_status ||--o{ tb_assy_pairing : "current status"
+    tb_master_assy_status ||--o{ tb_assy_lot : "current status"
     tb_assy_pairing ||--o{ tb_assy_pairing_event : journey
     tb_master_location ||--o{ tb_assy_pairing_event : "where"
     tb_master_location ||--o{ tb_assy_unknown_read : "where"
@@ -168,21 +170,20 @@ Seed (all process `1500`):
 | status_label | VARCHAR(50) | NOT NULL |
 | seq | INT | NOT NULL. Display order only (D5). |
 | location_id | INT NULL | FK → `tb_master_location.id`. Filtered UNIQUE `WHERE location_id IS NOT NULL` (one status per location). |
-| is_terminal | BIT | NOT NULL, default 0. Terminal = closes the pair. |
 
-CHECK: `(is_terminal = 1 AND location_id IS NULL) OR (is_terminal = 0 AND location_id IS NOT NULL)`.
-Meaning: every active status has a location (D18), and a scan can never close a pair.
+CHECK: `(status_code = 'CLEARED' AND location_id IS NULL) OR (status_code <> 'CLEARED' AND location_id IS NOT NULL)`.
+Meaning: every active status has a location (D18), and a scan can never clear a lot (D19).
 
 System statuses (seeded; the service blocks delete or a code change): `REGISTERED`, `CLEARED`.
 
 Seed:
 
-| seq | status_code | status_label | location | is_terminal |
-| --- | --- | --- | --- | --- |
-| 2 | REGISTERED | Registered | `bf_gr_f1` | 0 |
-| 3 | GR_F1 | Gauging Room F1 | `gr_f1` | 0 |
-| 4 | MC_F1 | MC Gauging F1 | `mc_f1` | 0 |
-| 5 | CLEARED | Cleared | — | 1 |
+| seq | status_code | status_label | location |
+| --- | --- | --- | --- |
+| 2 | REGISTERED | Registered | `bf_gr_f1` |
+| 3 | GR_F1 | Gauging Room F1 | `gr_f1` |
+| 4 | MC_F1 | MC Gauging F1 | `mc_f1` |
+| 5 | CLEARED | Cleared | — |
 
 #### `tb_assy_lot`
 
@@ -195,10 +196,17 @@ Seed:
 | spec | VARCHAR(20) | NULL |
 | qty | INT | NULL |
 | fetched_at | DATETIME2(0) | NOT NULL. Last AS400 fetch. |
+| status_id | INT | NOT NULL, FK → `tb_master_assy_status.id`. Current stage (D2). |
+| status_updated_at | DATETIME2(0) | NOT NULL, default `SYSDATETIME()`. Last status change. |
+| last_seen_at | DATETIME2(0) | NULL. Last reader read of the lot's tag (D6). |
 | created_at | DATETIME2(0) | NOT NULL, default `SYSDATETIME()` |
 
-Index: `IX_assy_lot_wos (wos)`.
-Each new pair re-fetches from AS400 and updates the snapshot (P7).
+Indexes: `IX_assy_lot_wos (wos)`, `IX_assy_lot_status (status_id) INCLUDE (qty, wos, brg_type)` (dashboard counts).
+
+Two groups of columns, two writers:
+
+- Snapshot (`wos`, `brg_type`, `spec`, `qty`, `fetched_at`): written on pair. Each new pair re-fetches from AS400 (P7).
+- State (`status_id`, `status_updated_at`): written only by `moveStatus` (and the first insert on pair). `last_seen_at`: written by scan.
 
 #### `tb_assy_tag`
 
@@ -209,20 +217,17 @@ Each new pair re-fetches from AS400 and updates the snapshot (P7).
 | is_active | BIT | NOT NULL, default 1 |
 | created_at | DATETIME2(0) | NOT NULL, default `SYSDATETIME()` |
 
-#### `tb_assy_pairing` (the "basket")
+#### `tb_assy_pairing` (the "basket": which tag carries which lot)
 
 | Column | Type | Rule |
 | --- | --- | --- |
 | id | INT IDENTITY | PK |
 | lot_id | INT | NOT NULL, FK → `tb_assy_lot.id` |
 | tag_id | INT | NOT NULL, FK → `tb_assy_tag.id` |
-| status_id | INT | NOT NULL, FK → `tb_master_assy_status.id` |
 | paired_by | VARCHAR(10) | NOT NULL. emp_id. |
 | paired_at | DATETIME2(0) | NOT NULL, default `SYSDATETIME()` |
-| last_seen_at | DATETIME2(0) | NULL. Last reader read (D6). |
 | closed_at | DATETIME2(0) | NULL. NULL = active. |
 | closed_by | VARCHAR(10) | NULL. emp_id for manual clear, NULL for the job. |
-| updated_at | DATETIME2(0) | NOT NULL, default `SYSDATETIME()` |
 
 Indexes:
 
@@ -230,10 +235,9 @@ Indexes:
 | --- | --- | --- |
 | `UX_pairing_active_lot` | `(lot_id) WHERE closed_at IS NULL` | Max one active pair per lot (D1) |
 | `UX_pairing_active_tag` | `(tag_id) WHERE closed_at IS NULL` | Max one active pair per tag (D1) |
-| `IX_pairing_active_status` | `(status_id) INCLUDE (lot_id) WHERE closed_at IS NULL` | Dashboard counts |
 | `IX_pairing_lot` | `(lot_id, paired_at)` | Journey per lot |
 
-Rule (service): `closed_at` is set **if and only if** the new status is terminal. One repository function does both.
+Rule (D20): `closed_at` is set **if and only if** the lot moves to `CLEARED`. `moveStatus` does both in one transaction.
 
 #### `tb_assy_pairing_event` (the journey, append-only)
 
@@ -242,7 +246,7 @@ Rule (service): `closed_at` is set **if and only if** the new status is terminal
 | id | BIGINT IDENTITY | PK |
 | pairing_id | INT | NOT NULL, FK |
 | event_type | VARCHAR(20) | NOT NULL. CHECK in (`PAIRED`, `SCANNED`, `CLEARED`) |
-| from_status_id | INT NULL | FK. NULL for `PAIRED`. |
+| from_status_id | INT NULL | FK. Lot status before the change. NULL for the first `PAIRED` of a new lot; `CLEARED` on a re-pair. |
 | to_status_id | INT | NOT NULL, FK |
 | location_id | INT NULL | FK. Set for `PAIRED` (`bf_gr_f1`) and `SCANNED`. NULL for `CLEARED`. |
 | source | VARCHAR(10) | NOT NULL. CHECK in (`web`, `reader`, `job`) |
@@ -270,7 +274,7 @@ When it happens: a reader reads a tag with no active pair. For example, a tray g
 
 #### Other tables (kept or recreated by their own modules)
 
-- `tb_assy_api_log`: all external API calls are logged here (see 8.4).
+- `tb_assy_api_log`: all external API calls are logged here (D21, see 8.4).
 - `tb_assy_login`: B6.
 - `tb_assy_mock_as400`, `tb_assy_mock_done`: dev-only data behind the mock routes (P8).
 
@@ -326,8 +330,12 @@ Rules:
 
 - **Dependency injection**: `createPairingService({ db, repo, as400Client, doneClient })`. Unit tests pass fakes.
 - **Express 5**: rejected promises reach the error handler on their own. No `asyncHandler` wrapper.
-- **One writer for state**: only `pairingRepository.moveStatus(txDb, { pairingId, fromStatusId, toStatus, eventType, locationId, source, empId, remark })` updates `status_id` / `closed_at` / `closed_by` and inserts the event, in the given transaction.
-- **Locking**: inside a transaction, read the pairing `WITH (UPDLOCK, ROWLOCK)` before changing it. The unique indexes stay the final guard.
+- **One writer for state**: only `pairingRepository.moveStatus(txDb, { lotId, pairingId, fromStatusId, toStatus, eventType, locationId, source, empId, remark })` does all three, in the given transaction:
+  1. Updates `tb_assy_lot.status_id` + `status_updated_at`.
+  2. If `toStatus` is `CLEARED`: sets the pairing's `closed_at` / `closed_by` (D20).
+  3. Inserts the event.
+- **Current state vs history**: current status is read **only** from `tb_assy_lot.status_id`. Events are history; no code reads "the latest event" to decide the current status. `lot.status_id` is a stored copy of the latest event's `to_status_id`, kept in step by `moveStatus` (D15).
+- **Locking**: every state change locks the **lot row** first (`WITH (UPDLOCK, ROWLOCK)`). So pair, scan and clear on the same lot always run one after another. The unique indexes stay the final guard.
 - **No HTTP call inside a DB transaction.** Call the external API first, then open the transaction and re-check.
 
 ---
@@ -350,13 +358,16 @@ All paths below are under `/api/assembly`.
 
 1. `as400Client.fetchLot(lot_no)`. Null → 404 `LOT_NOT_FOUND`. Error → 502 `UPSTREAM_ERROR`.
 2. Transaction:
-   1. Upsert lot snapshot (`fetched_at = now`).
+   1. Lot by `lot_no` (lock).
+      - Exists and status ≠ `CLEARED` → 409 `LOT_ALREADY_PAIRED` (with `tag_code`).
+      - Exists and `CLEARED` → update the snapshot (`fetched_at = now`).
+      - Not exists → insert lot with the snapshot and status `REGISTERED`.
    2. Get or create the tag. `is_active = 0` → 409 `TAG_INACTIVE`.
    3. Active pair on this tag → 409 `TAG_IN_USE` (with `lot_no` of the other lot).
-   4. Active pair on this lot → 409 `LOT_ALREADY_PAIRED` (with `tag_code`).
-   5. Insert pairing with status `REGISTERED` + event `PAIRED` (`source = web`, `location_id` = `bf_gr_f1`).
-   6. Unique-index violation from a race → map to `TAG_IN_USE` / `LOT_ALREADY_PAIRED`.
-3. 201 with the pairing view (7.7).
+   4. Insert pairing.
+   5. `moveStatus` → `REGISTERED`, event `PAIRED` (`source = web`, `location_id` = `bf_gr_f1`, from = `CLEARED` on re-pair, NULL for a new lot).
+   6. Unique violation from a race (`lot_no`, or an active-pair index) → map to `LOT_ALREADY_PAIRED` / `TAG_IN_USE`.
+3. 201 with the lot view (7.7).
 
 ### 7.3 Retire tag — B2
 
@@ -371,9 +382,9 @@ Batch, because one reader cycle sees many tags, and 60+ readers are planned (com
 1. Location by code. Not found or inactive → 404 `LOCATION_NOT_FOUND`.
 2. Status for the location. None → 422 `LOCATION_HAS_NO_STATUS`.
 3. Remove duplicate codes in the batch. Then for each tag code, **its own transaction**:
-   - Find the active pairing by tag code (lock). None → upsert unknown read → outcome `UNKNOWN`.
-   - `pairing.status_id == location status` → update `last_seen_at` → outcome `SEEN` (D6).
-   - Else → `moveStatus` to the location status, event `SCANNED`, `source = reader`, set `last_seen_at` → outcome `MOVED` (D5, any direction).
+   - Find the active pairing by tag code, then lock its lot. None → upsert unknown read → outcome `UNKNOWN`.
+   - `lot.status_id == location status` → update `lot.last_seen_at` → outcome `SEEN` (D6).
+   - Else → `moveStatus` to the location status, event `SCANNED`, `source = reader`, set `lot.last_seen_at` → outcome `MOVED` (D5, any direction).
    - Any error on one tag → outcome `ERROR` with code. Other tags go on.
 4. 200 `{ location_code, results: [{ tag_code, outcome, lot_no?, from_status?, to_status?, error? }] }`
 
@@ -381,12 +392,12 @@ Batch, because one reader cycle sees many tags, and 60+ readers are planned (com
 
 Both triggers end in the same repository call: `moveStatus(... toStatus: CLEARED, eventType: CLEARED ...)`.
 
-#### Auto clear (job) — `pairingService.autoClear(pairingId)`
+#### Auto clear (job) — `pairingService.autoClear(lotId)`
 
-1. Read the pairing (no lock). Closed → skip.
+1. Read the lot (no lock). `CLEARED` → skip.
 2. `doneClient.isLotDone(lot_no)`. False → skip. Error → log, skip.
-3. Transaction: lock pairing. Closed now (race) → skip.
-4. `moveStatus` → `CLEARED`, `source = job`, no `emp_id`, no remark.
+3. Transaction: lock the lot. `CLEARED` now (race) → skip.
+4. `moveStatus` → `CLEARED` (closes the active pairing), `source = job`, no `emp_id`, no remark.
 
 Job (`jobs/autoClearJob.js`):
 
@@ -398,7 +409,7 @@ Job (`jobs/autoClearJob.js`):
 | HTTP timeout | `DONE_API_TIMEOUT_MS` | `5000` |
 
 - Overlap guard: skip a run if the last one is still going.
-- Each run: all active pairings → `autoClear(id)`.
+- Each run: all lots with status ≠ `CLEARED` → `autoClear(id)`.
 - End of run: one log line `{ checked, cleared, errors, ms }`.
 - Runbook: `docs/runbooks/auto-clear-job.md` (enable, change interval, check it runs, stop it).
 
@@ -406,13 +417,13 @@ Job (`jobs/autoClearJob.js`):
 
 `POST /lots/:lot_no/clear` body `{ tag_code, emp_id, remark }`
 
-1. Transaction: find the active pairing of the lot (lock).
+1. Transaction: lot by `lot_no` (lock), with its active pairing.
    - Lot not in our DB → 404 `LOT_NOT_REGISTERED`.
-   - No active pair → 409 `PAIRING_CLOSED`.
-   - Its tag ≠ `tag_code` → 409 `TAG_LOT_MISMATCH`. The BE checks the match; the FE check is only UX.
-   - Process of the current status (status → location → process) has `can_clear_tag = 0` → 409 `PROCESS_NOT_CLEARABLE`.
+   - Lot status is `CLEARED` (no active pair) → 409 `PAIRING_CLOSED`.
+   - Active pairing's tag ≠ `tag_code` → 409 `TAG_LOT_MISMATCH`. The BE checks the match; the FE check is only UX.
+   - Process of the lot status (status → location → process) has `can_clear_tag = 0` → 409 `PROCESS_NOT_CLEARABLE`.
 2. `moveStatus` → `CLEARED`, `source = web`, `emp_id`, `remark`.
-3. 200 with the pairing view.
+3. 200 with the lot view.
 
 No done API call (D17). `remark` is required (1–255 chars).
 
@@ -420,39 +431,41 @@ No done API call (D17). `remark` is required (1–255 chars).
 
 | Endpoint | Returns |
 | --- | --- |
-| `GET /lots/:lot_no` | Lot snapshot + current stage (section 4) + active pairing (tag, status, location, process, `can_clear_tag`, `last_seen_at`). Replaces `lot-by-lot`. |
-| `GET /lots/:lot_no/journey` | All pairings of the lot, newest first, each with its events in time order |
+| `GET /lots/:lot_no` | Lot view (7.7): snapshot + status (location, process, `can_clear_tag`, `last_seen_at`) + active tag. Replaces `lot-by-lot`. |
+| `GET /lots/:lot_no/journey` | Flat timeline of all events of the lot (all its pairings), `ORDER BY created_at ASC, id ASC`. Each row: `created_at`, `event_type`, `from_status`, `to_status`, `location_code`, `tag_code`, `source`, `emp_id`, `remark`. Lot not in our DB → 404 `LOT_NOT_REGISTERED`. |
 | `GET /tags/:tag_code` | Tag + active pairing with lot. Replaces `lot-by-tag`. |
-| `GET /lots` | Current-state list. Filters: `status`, `process`, `q` (lot / tag / WOS / brg_type), `active` (default true), `page`, `page_size` (default 50, max 200) |
+| `GET /lots` | Current-state list. Filters: `status`, `process`, `q` (lot / tag / WOS / brg_type), `active` (default true = status ≠ `CLEARED`), `page`, `page_size` (default 50, max 200) |
 | `GET /events` | Event history. Filters: `from`, `to`, `event_type`, `source`, `location`, `q` (lot / tag / emp / brg_type), `page`, `page_size`. The Clear Tag history tab = `event_type=CLEARED`. |
 | `GET /unknown-reads` | Unknown reads. Filter: `location`. |
-| `GET /dashboard/summary` | Active pair count + qty per status |
+| `GET /dashboard/summary` | Lot count + qty per status (from `tb_assy_lot`, no pairing join) |
 | `GET /dashboard/by-process` | Active qty per process (status → location → process) |
-| `GET /dashboard/inventory` | Active pairs grouped part (`brg_type`) → WOS: `{ part_no, wos, qty, lot_count, machines: string[] }` + `machines_available: boolean` |
+| `GET /dashboard/inventory` | Active lots grouped part (`brg_type`) → WOS: `{ part_no, wos, qty, lot_count, machines: string[] }` + `machines_available: boolean` |
 
 Inventory merge: the repository returns WOS rows. The service attaches `machines` from `machineClient` (D14). If the machine API fails → `machines: []` and `machines_available: false`. The request does not fail.
 
-### 7.7 Pairing view (shared response shape)
+### 7.7 Lot view (shared response shape)
 
 ```json
 {
-  "pairing_id": 12,
   "lot_no": "DEMO000001",
-  "tag_code": "E28011700000020A1B2C3D4E",
   "wos": "WOS2609001",
   "brg_type": "6204ZZCM",
   "spec": "SPEC-6204",
   "qty": 500,
   "status_code": "GR_F1",
   "status_label": "Gauging Room F1",
+  "status_updated_at": "2026-10-01T08:20:00",
   "location_code": "gr_f1",
   "process_code": "1500",
   "can_clear_tag": true,
-  "paired_at": "2026-10-01T08:00:00",
   "last_seen_at": "2026-10-01T08:20:00",
-  "closed_at": null
+  "pairing_id": 12,
+  "tag_code": "E28011700000020A1B2C3D4E",
+  "paired_at": "2026-10-01T08:00:00"
 }
 ```
+
+When the lot is `CLEARED`: `location_code`, `process_code`, `can_clear_tag`, `pairing_id`, `tag_code`, `paired_at` are `null`.
 
 ### 7.8 Master data — B1
 
@@ -547,7 +560,9 @@ Must-have service cases:
 - Scan: unknown tag; same location (SEEN, no event); forward move; **backward move** (D5); one bad tag does not stop the batch; duplicate codes in the batch.
 - Auto clear: not done → skip; done → cleared with `source = job`, no `emp_id`; race (closed between check and lock) → skip; upstream error → skip and count.
 - Manual clear: no done API call; tag mismatch → 409; process not clearable → 409; no active pair → 409; missing remark → 400.
+- Re-pair: a `CLEARED` lot pairs again → status `REGISTERED`, event `PAIRED` with from = `CLEARED`.
 - Invariant: every status change writes exactly one event, in the same transaction.
+- Invariant (D20): after every pair / scan / clear, lot status ≠ `CLEARED` ⇔ the lot has an active pairing. Unit test on `moveStatus` callers; integration test on the repository.
 
 ### Bruno
 
@@ -567,6 +582,7 @@ Requests in `bruno/AYT-RFID/`, one per endpoint, grouped by module. Fake data on
 | R6 | Machine API down. | Inventory shows no machines. | `machines_available: false` + 10-min stale fallback. |
 | R7 | FE calls old routes until B7. | FE breaks against the real backend during B0–B5. | FE keeps working in mock mode. B7 switches it. |
 | R8 | Wrong pairs are fixed by manual clear (D12). | Stage-5 counts include wrong pairs. | The remark and the journey show the truth. Adding a `CANCELLED` status later is additive (one master row + one service branch). |
+| R9 | D20 spans two tables (lot status + pairing `closed_at`). The DB cannot enforce it. | A bug outside `moveStatus` could leave a lot "active" with no tag, or the reverse. | Only `moveStatus` writes both; lot row lock; invariant tests (section 10) with a check query: lots where status ≠ `CLEARED` and no active pairing, and the reverse. |
 
 ---
 
