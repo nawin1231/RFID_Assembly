@@ -6,7 +6,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-//*need to can handle 30+ reader node points in the future
+//*need to can handle 60+ reader node points in the future
 
 const assemblyRoutes = require('./routes/assembly');
 app.use('/api/assembly', assemblyRoutes);
